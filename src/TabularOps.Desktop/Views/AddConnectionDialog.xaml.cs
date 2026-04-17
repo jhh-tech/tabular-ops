@@ -27,6 +27,10 @@ public partial class AddConnectionDialog : Window
     {
         PanelPowerBi.Visibility = Visibility.Visible;
         PanelSsas.Visibility = Visibility.Collapsed;
+        // Hide Connect until workspaces are loaded; workspace picker step shows it
+        BtnConnect.Visibility = StepWorkspacePicker.Visibility == Visibility.Visible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         BtnConnect.IsEnabled = false;
     }
 
@@ -34,6 +38,7 @@ public partial class AddConnectionDialog : Window
     {
         PanelPowerBi.Visibility = Visibility.Collapsed;
         PanelSsas.Visibility = Visibility.Visible;
+        BtnConnect.Visibility = Visibility.Visible;
         BtnConnect.IsEnabled = true;
     }
 
@@ -51,6 +56,7 @@ public partial class AddConnectionDialog : Window
 
             StepSignIn.Visibility = Visibility.Collapsed;
             StepWorkspacePicker.Visibility = Visibility.Visible;
+            BtnConnect.Visibility = Visibility.Visible;
             TxtSearch.Focus();
         }
         catch (Exception ex)
@@ -83,11 +89,10 @@ public partial class AddConnectionDialog : Window
             {
                 Content = w.Name,
                 IsChecked = _checkedNames.Contains(w.Name),
+                Style = (Style)FindResource("DarkCheckBox"),
                 FontFamily = (FontFamily)FindResource("MonoFont"),
                 FontSize = 12,
-                Foreground = (Brush)FindResource("Text0"),
-                Background = Brushes.Transparent,
-                Padding = new Thickness(6, 5, 10, 5),
+                Padding = new Thickness(8, 5, 10, 5),
                 Margin = new Thickness(4, 0, 0, 0),
             };
             cb.Checked += OnCheckChanged;

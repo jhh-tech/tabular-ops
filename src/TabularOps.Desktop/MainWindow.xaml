@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TabularOps.Desktop.ViewModels"
+        xmlns:views="clr-namespace:TabularOps.Desktop.Views"
         mc:Ignorable="d"
         Title="Tabular Ops"
         Icon="pack://application:,,,/Assets/app.ico"
@@ -129,6 +130,29 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
+                    <!-- Restore progress bar — shown while connections are loading on startup -->
+                    <Border Grid.Row="0"
+                            Height="2"
+                            VerticalAlignment="Top"
+                            Visibility="{Binding IsRestoring, Converter={StaticResource BoolToVisibleConverter}}"
+                            Panel.ZIndex="1">
+                        <Rectangle Fill="{StaticResource Accent}">
+                            <Rectangle.Triggers>
+                                <EventTrigger RoutedEvent="Rectangle.Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="Opacity"
+                                                From="0.3" To="1.0"
+                                                Duration="0:0:0.9"
+                                                AutoReverse="True" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Rectangle.Triggers>
+                        </Rectangle>
+                    </Border>
+
                     <!-- Model tree -->
                     <ScrollViewer Grid.Row="0"
                                   VerticalScrollBarVisibility="Auto"
@@ -138,37 +162,75 @@
                                 <DataTemplate DataType="{x:Type vm:TenantNodeViewModel}">
                                     <StackPanel Margin="0,4,0,0">
                                         <!-- Tenant header -->
-                                        <Border Padding="12,4" Background="Transparent">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0"
-                                                         VerticalAlignment="Center">
-                                                    <Ellipse.Style>
-                                                        <Style TargetType="Ellipse">
-                                                            <Setter Property="Fill" Value="{StaticResource Success}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Status}"
-                                                                             Value="{x:Static vm:TenantConnectionStatus.Error}">
-                                                                    <Setter Property="Fill" Value="{StaticResource Error}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Status}"
-                                                                             Value="{x:Static vm:TenantConnectionStatus.ReadOnly}">
-                                                                    <Setter Property="Fill" Value="{StaticResource Warn}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Status}"
-                                                                             Value="{x:Static vm:TenantConnectionStatus.Connecting}">
-                                                                    <Setter Property="Fill" Value="{StaticResource Text3}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Ellipse.Style>
-                                                </Ellipse>
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           FontFamily="{StaticResource SansFont}"
-                                                           FontSize="11"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{StaticResource Text2}"
-                                                           VerticalAlignment="Center" />
-                                            </StackPanel>
+                                        <Border x:Name="TenantHeader"
+                                                Padding="12,4,4,4"
+                                                Background="Transparent">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Status dot + name -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse Width="6" Height="6" Margin="0,0,6,0"
+                                                             VerticalAlignment="Center">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Setter Property="Fill" Value="{StaticResource Success}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Status}"
+                                                                                 Value="{x:Static vm:TenantConnectionStatus.Error}">
+                                                                        <Setter Property="Fill" Value="{StaticResource Error}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Status}"
+                                                                                 Value="{x:Static vm:TenantConnectionStatus.ReadOnly}">
+                                                                        <Setter Property="Fill" Value="{StaticResource Warn}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Status}"
+                                                                                 Value="{x:Static vm:TenantConnectionStatus.Connecting}">
+                                                                        <Setter Property="Fill" Value="{StaticResource Text3}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontFamily="{StaticResource SansFont}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource Text2}"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <!-- Remove × button — visible on hover of parent Border -->
+                                                <Button Grid.Column="1"
+                                                        Content="✕"
+                                                        ToolTip="Remove connection"
+                                                        Style="{StaticResource FlatButton}"
+                                                        FontSize="10"
+                                                        Foreground="{StaticResource Text3}"
+                                                        BorderThickness="0"
+                                                        Padding="5,2"
+                                                        Command="{Binding DataContext.RemoveTenantCommand,
+                                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsMouseOver,
+                                                                     RelativeSource={RelativeSource AncestorType=Border},
+                                                                     Converter={StaticResource BoolToVisibleConverter}}" />
+                                            </Grid>
+
+                                            <!-- Show × on hover -->
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource Bg2}" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                         </Border>
 
                                         <!-- Model list -->
@@ -263,8 +325,9 @@
                           Cursor="SizeWE" />
 
             <!-- ─── MAIN CONTENT AREA ─── -->
-            <Border Grid.Column="2" Background="{StaticResource Bg0}">
-                <!-- Placeholder — replaced by tab host in Milestone 2 -->
+            <Grid Grid.Column="2" Background="{StaticResource Bg0}">
+
+                <!-- Empty state: no model selected -->
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                             Visibility="{Binding ActiveModel, Converter={StaticResource NullToVisibleConverter}}">
                     <TextBlock Text="Select a model to get started"
@@ -272,8 +335,50 @@
                                FontSize="13"
                                Foreground="{StaticResource Text2}"
                                HorizontalAlignment="Center" />
+                    <TextBlock Text="Choose a model from the sidebar"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="11"
+                               Foreground="{StaticResource Text3}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0" />
                 </StackPanel>
-            </Border>
+
+                <!-- Tab host: visible when a model is active -->
+                <Grid Visibility="{Binding ActiveModel, Converter={StaticResource NullToCollapsedConverter}}">
+                    <Grid.RowDefinitions>
+                        <!-- Tab strip -->
+                        <RowDefinition Height="36" />
+                        <!-- Tab content -->
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- ── Tab strip ── -->
+                    <Border Grid.Row="0"
+                            Background="{StaticResource Bg1}"
+                            BorderBrush="{StaticResource Border}"
+                            BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton Content="PARTITIONS"
+                                          Style="{StaticResource TabButton}"
+                                          IsChecked="True"
+                                          IsHitTestVisible="False" />
+                            <ToggleButton Content="TRACE"
+                                          Style="{StaticResource TabButton}"
+                                          IsEnabled="False" />
+                            <ToggleButton Content="HISTORY"
+                                          Style="{StaticResource TabButton}"
+                                          IsEnabled="False" />
+                            <ToggleButton Content="SESSIONS"
+                                          Style="{StaticResource TabButton}"
+                                          IsEnabled="False" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Tab content: Partitions ── -->
+                    <views:PartitionMapView Grid.Row="1"
+                                           DataContext="{Binding PartitionMap}" />
+                </Grid>
+            </Grid>
         </Grid>
 
         <!-- ═══════════════════════════════ STATUS BAR ═══════════════════════════════ -->

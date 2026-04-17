@@ -14,14 +14,17 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<TenantNodeViewModel> Tenants { get; } = [];
     public StatusBarViewModel StatusBar { get; } = new();
+    public PartitionMapViewModel PartitionMap { get; }
 
     [ObservableProperty] private TenantNodeViewModel? _activeTenant;
     [ObservableProperty] private ModelNodeViewModel? _activeModel;
+    [ObservableProperty] private bool _isRestoring;
 
     public MainViewModel(ConnectionManager connectionManager, ConnectionStore connectionStore)
     {
         _connectionManager = connectionManager;
         _connectionStore = connectionStore;
+        PartitionMap = new PartitionMapViewModel(connectionManager);
     }
 
     partial void OnActiveTenantChanged(TenantNodeViewModel? value)
@@ -43,10 +46,49 @@ public partial class MainViewModel : ObservableObject
     public async Task RestoreConnectionsAsync(CancellationToken ct = default)
     {
         var saved = await _connectionStore.LoadAsync(ct);
+        if (saved.Count == 0) return;
+
+        // Create all sidebar nodes immediately so the user sees them right away
         foreach (var context in saved)
-        {
             RegisterTenant(context);
-            _ = LoadModelsAsync(context, ct);
+
+        // Connect all tenants concurrently; show a loading indicator until done
+        IsRestoring = true;
+        try
+        {
+            await Task.WhenAll(saved.Select(c => RestoreConnectionAsync(c, ct)));
+        }
+        finally
+        {
+            IsRestoring = false;
+        }
+    }
+
+    /// <summary>
+    /// Registers a saved connection with ConnectionManager (acquires token silently,
+    /// opens TOM/ADOMD connections) and then enumerates models.
+    /// </summary>
+    private async Task RestoreConnectionAsync(TenantContext saved, CancellationToken ct)
+    {
+        var tenant = Tenants.FirstOrDefault(t => t.TenantId == saved.TenantId);
+        if (tenant is null) return;
+
+        try
+        {
+            // This registers the tenant in ConnectionManager._tenants and connects.
+            // For Power BI it acquires the token silently from the MSAL cache on disk.
+            var registered = saved.EndpointType == EndpointType.PowerBi
+                ? await _connectionManager.AddPowerBiTenantAsync(
+                    saved.ConnectionString, saved.DisplayName, ct)
+                : await _connectionManager.AddSsasTenantAsync(
+                    saved.ConnectionString, saved.DisplayName, ct);
+
+            await LoadModelsAsync(registered, ct);
+        }
+        catch (Exception ex)
+        {
+            tenant.Status = TenantConnectionStatus.Error;
+            tenant.ErrorMessage = ex.Message;
         }
     }
 
@@ -114,6 +156,27 @@ public partial class MainViewModel : ObservableObject
             ActiveTenant = ownerTenant;
             await _connectionManager.SetActiveTenantAsync(ownerTenant.TenantId);
         }
+
+        _ = PartitionMap.LoadAsync(model.Model);
+    }
+
+    [RelayCommand]
+    private async Task RemoveTenant(TenantNodeViewModel tenant)
+    {
+        Tenants.Remove(tenant);
+
+        if (ActiveTenant == tenant)
+        {
+            ActiveTenant = Tenants.FirstOrDefault();
+            ActiveModel = null;
+        }
+        else if (ActiveModel is not null && tenant.Models.Contains(ActiveModel))
+        {
+            ActiveModel = null;
+        }
+
+        await _connectionManager.RemoveTenantAsync(tenant.TenantId);
+        await SaveConnectionsAsync();
     }
 
     public void RegisterTenant(TenantContext context)

@@ -1,0 +1,341 @@
+<UserControl x:Class="TabularOps.Desktop.Views.PartitionMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:TabularOps.Desktop.ViewModels"
+             xmlns:model="clr-namespace:TabularOps.Core.Model;assembly=TabularOps.Core"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="{StaticResource Bg0}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Toolbar: filter chips + reload -->
+            <RowDefinition Height="40" />
+            <!-- Content -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ═══════════════════════════════ TOOLBAR ═══════════════════════════════ -->
+        <Border Grid.Row="0"
+                Background="{StaticResource Bg1}"
+                BorderBrush="{StaticResource Border}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Filter chips -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToggleButton Content="ALL"
+                                  Style="{StaticResource FilterChip}"
+                                  IsChecked="{Binding IsFilterAll, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.All}" />
+                    <ToggleButton Content="STALE"
+                                  Style="{StaticResource FilterChip}"
+                                  IsChecked="{Binding IsFilterStale, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Stale}" />
+                    <ToggleButton Content="FAILED"
+                                  Style="{StaticResource FilterChip}"
+                                  IsChecked="{Binding IsFilterFailed, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Failed}" />
+                    <ToggleButton Content="REFRESHING"
+                                  Style="{StaticResource FilterChip}"
+                                  IsChecked="{Binding IsFilterRefreshing, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Refreshing}" />
+                </StackPanel>
+
+                <!-- Reload button -->
+                <Button Grid.Column="1"
+                        Content="↺ Reload"
+                        Style="{StaticResource FlatButton}"
+                        Command="{Binding ReloadCommand}"
+                        FontFamily="{StaticResource MonoFont}"
+                        FontSize="11"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════ CONTENT ═══════════════════════════════ -->
+        <Grid Grid.Row="1">
+
+            <!-- Loading indicator -->
+            <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibleConverter}}">
+                <!-- Pulsing accent bar at top -->
+                <Border Height="2" VerticalAlignment="Top">
+                    <Rectangle Fill="{StaticResource Accent}">
+                        <Rectangle.Triggers>
+                            <EventTrigger RoutedEvent="Rectangle.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         From="0.25" To="1.0"
+                                                         Duration="0:0:0.8"
+                                                         AutoReverse="True" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Rectangle.Triggers>
+                    </Rectangle>
+                </Border>
+                <!-- Centred label -->
+                <TextBlock Text="Loading partitions…"
+                           FontFamily="{StaticResource MonoFont}"
+                           FontSize="12"
+                           Foreground="{StaticResource Text2}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Error state -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Margin="32"
+                        Visibility="{Binding ErrorMessage, Converter={StaticResource NullToCollapsedConverter}}">
+                <TextBlock Text="Failed to load partitions"
+                           FontFamily="{StaticResource SansFont}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource Error}"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding ErrorMessage}"
+                           FontFamily="{StaticResource MonoFont}"
+                           FontSize="11"
+                           Foreground="{StaticResource Text2}"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="480"
+                           Margin="0,8,0,0" />
+                <Button Content="Retry"
+                        Style="{StaticResource FlatButton}"
+                        Command="{Binding ReloadCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,12,0,0" />
+            </StackPanel>
+
+            <!-- Empty filter result -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Visibility="{Binding VisibleTables.Count, Converter={StaticResource ZeroToVisibleConverter}}">
+                <TextBlock Text="No partitions match this filter"
+                           FontFamily="{StaticResource SansFont}"
+                           FontSize="13"
+                           Foreground="{StaticResource Text2}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Partition table list — hidden while loading or when an error is shown -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,4,0,12">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}">
+                                <!-- visible when no error — handled by outer logic -->
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
+
+                <ItemsControl ItemsSource="{Binding VisibleTables}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:TableViewModel}">
+
+                            <!-- ── TABLE SECTION ── -->
+                            <Border Margin="12,4,12,0"
+                                    BorderBrush="{StaticResource Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Background="{StaticResource Bg1}">
+                                <StackPanel>
+
+                                    <!-- Table header -->
+                                    <Border Padding="12,8"
+                                            BorderBrush="{StaticResource Border}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Table name -->
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding TableName}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="12"
+                                                       FontWeight="Bold"
+                                                       Foreground="{StaticResource Text0}"
+                                                       VerticalAlignment="Center" />
+
+                                            <!-- Row count -->
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding DisplayRowCount}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Text2}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="16,0,0,0" />
+
+                                            <!-- Size -->
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding DisplaySize}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource Text2}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="16,0,0,0" />
+
+                                            <!-- Partition count -->
+                                            <TextBlock Grid.Column="3"
+                                                       Text="{Binding PartitionLabel}"
+                                                       FontFamily="{StaticResource SansFont}"
+                                                       FontSize="10"
+                                                       Foreground="{StaticResource Text3}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="16,0,0,0" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Partition cell grid -->
+                                    <ItemsControl ItemsSource="{Binding Partitions}" Margin="6,6,6,6">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:PartitionCellViewModel}">
+
+                                                <!-- ── PARTITION CELL ── -->
+                                                <Border Width="108" Height="50"
+                                                        Margin="2"
+                                                        BorderThickness="1"
+                                                        CornerRadius="2"
+                                                        ToolTip="{Binding ToolTip}"
+                                                        Cursor="Hand"
+                                                        ClipToBounds="True">
+
+                                                    <!-- State-driven border + background -->
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <!-- Default: Ok -->
+                                                            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                                                            <Setter Property="Background">
+                                                                <Setter.Value>
+                                                                    <SolidColorBrush Color="{StaticResource AccentColor}" Opacity="0.09" />
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                            <Setter Property="Opacity" Value="1.0" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding State}"
+                                                                             Value="{x:Static model:PartitionState.Stale}">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource Text3}" />
+                                                                    <Setter Property="Background" Value="Transparent" />
+                                                                    <Setter Property="Opacity" Value="0.55" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding State}"
+                                                                             Value="{x:Static model:PartitionState.Failed}">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource Error}" />
+                                                                    <Setter Property="Background">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="{StaticResource ErrorColor}" Opacity="0.09" />
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding State}"
+                                                                             Value="{x:Static model:PartitionState.Refreshing}">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource Info}" />
+                                                                    <Setter Property="Background">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="{StaticResource InfoColor}" Opacity="0.09" />
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding State}"
+                                                                             Value="{x:Static model:PartitionState.Queued}">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource Warn}" />
+                                                                    <Setter Property="Background">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="{StaticResource WarnColor}" Opacity="0.09" />
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+
+                                                    <!-- Cell content -->
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <!-- fill bar -->
+                                                            <RowDefinition Height="3" />
+                                                        </Grid.RowDefinitions>
+
+                                                        <!-- Text content -->
+                                                        <StackPanel Grid.Row="0" Margin="6,4,4,2" VerticalAlignment="Top">
+                                                            <TextBlock Text="{Binding PartitionName}"
+                                                                       FontFamily="{StaticResource MonoFont}"
+                                                                       FontSize="10"
+                                                                       FontWeight="Medium"
+                                                                       Foreground="{StaticResource Text0}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding PartitionName}" />
+                                                            <TextBlock Text="{Binding DisplayRowCount}"
+                                                                       FontFamily="{StaticResource MonoFont}"
+                                                                       FontSize="9"
+                                                                       Foreground="{StaticResource Text2}"
+                                                                       Margin="0,2,0,0" />
+                                                            <TextBlock Text="{Binding DisplaySize}"
+                                                                       FontFamily="{StaticResource MonoFont}"
+                                                                       FontSize="9"
+                                                                       Foreground="{StaticResource Text3}" />
+                                                        </StackPanel>
+
+                                                        <!-- Fill bar at bottom -->
+                                                        <Border Grid.Row="1"
+                                                                x:Name="FillTrack"
+                                                                Background="{StaticResource Bg3}">
+                                                            <Border HorizontalAlignment="Left"
+                                                                    Background="{StaticResource AccentDim}">
+                                                                <Border.Width>
+                                                                    <MultiBinding Converter="{StaticResource RatioWidthMultiConverter}">
+                                                                        <Binding Path="ActualWidth"
+                                                                                 RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}" />
+                                                                        <Binding Path="FillRatio" />
+                                                                    </MultiBinding>
+                                                                </Border.Width>
+                                                            </Border>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                </StackPanel>
+                            </Border>
+
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+        </Grid>
+    </Grid>
+
+</UserControl>

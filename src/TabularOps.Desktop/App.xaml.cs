@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Interop;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Client;
 using TabularOps.Core.Connection;
 
 namespace TabularOps.Desktop;
@@ -30,6 +32,22 @@ public partial class App : Application
 
         ConnectionManager = new ConnectionManager(Path.Combine(appDataDir, "Cache"), clientId);
         ConnectionStore = new ConnectionStore(appDataDir);
+
+        // Ensure interactive token acquisition always runs on the UI thread with the
+        // main window handle — required for Windows broker (WAM) on Windows 10/11.
+        ConnectionManager.InteractiveAuthProvider = (app, scopes) =>
+            Dispatcher.InvokeAsync(async () =>
+            {
+                var hwnd = MainWindow is not null
+                    ? new WindowInteropHelper(MainWindow).Handle
+                    : IntPtr.Zero;
+
+                return await app
+                    .AcquireTokenInteractive(scopes)
+                    .WithParentActivityOrWindow(hwnd)
+                    .WithPrompt(Prompt.SelectAccount)
+                    .ExecuteAsync();
+            }).Task.Unwrap();
     }
 
     protected override async void OnExit(ExitEventArgs e)

@@ -35,6 +35,9 @@ public sealed class ConnectionManager : IAsyncDisposable
     private readonly SemaphoreSlim _msalInitLock = new(1, 1);
 
     private readonly Dictionary<string, TenantState> _tenants = new();
+    // Cached catalog-scoped TOM servers — keyed by (tenantId, databaseName).
+    // Reused across loads so Reload doesn't re-open a new connection.
+    private readonly Dictionary<(string, string), Server> _catalogServers = new();
     private string? _activeTenantId;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -151,6 +154,101 @@ public sealed class ConnectionManager : IAsyncDisposable
     }
 
     /// <summary>
+    /// Returns a TOM Server scoped to a specific database via <c>Initial Catalog</c>,
+    /// creating and caching it on first call and reusing it on subsequent calls.
+    /// Required for Power BI XMLA — model-level access fails without a catalog.
+    /// ConnectionManager owns the lifetime; do NOT dispose the returned Server.
+    /// </summary>
+    public async Task<Server> GetOrCreateCatalogServerAsync(
+        string tenantId, string databaseName, CancellationToken ct = default)
+    {
+        var key = (tenantId, databaseName);
+
+        await _lock.WaitAsync(ct);
+        try
+        {
+            if (_catalogServers.TryGetValue(key, out var cached) && cached.Connected)
+                return cached;
+
+            var state = GetState(tenantId);
+            var cs = await BuildConnectionStringAsync(state, ct);
+            cs = AppendCatalog(cs, databaseName);
+
+            var server = new Server();
+            await Task.Run(() => server.Connect(cs), ct);
+
+            // Dispose stale server before replacing
+            if (_catalogServers.TryGetValue(key, out var old))
+            {
+                old.Disconnect();
+                old.Dispose();
+            }
+            _catalogServers[key] = server;
+            return server;
+        }
+        finally { _lock.Release(); }
+    }
+
+    /// <summary>
+    /// Executes a DMV or DAX query and returns the results as a list of rows.
+    /// When <paramref name="catalogName"/> is provided a dedicated connection with
+    /// <c>Initial Catalog</c> is opened (required for DISCOVER_* DMVs on Power BI
+    /// XMLA endpoints that don't accept queries without a current catalog).
+    /// </summary>
+    public async Task<List<Dictionary<string, object?>>> ExecuteDmvAsync(
+        string tenantId,
+        string query,
+        CancellationToken ct = default,
+        string? catalogName = null)
+    {
+        var state = GetState(tenantId);
+        await EnsureConnectedAsync(state, ct);
+
+        // Power BI XMLA requires Initial Catalog for DMV queries — open a short-lived
+        // dedicated connection with the catalog set rather than mutating the shared one.
+        AdomdConnection connection;
+        bool ownConnection = catalogName is not null;
+
+        if (ownConnection)
+        {
+            var cs = await BuildConnectionStringAsync(state, ct);
+            cs = AppendCatalog(cs, catalogName!);
+            connection = new AdomdConnection(cs);
+            await Task.Run(() => connection.Open(), ct);
+        }
+        else
+        {
+            connection = state.PollConnection!;
+        }
+
+        try
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = query;
+
+            using var reader = cmd.ExecuteReader();
+            var results = new List<Dictionary<string, object?>>();
+
+            while (reader.Read())
+            {
+                var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < reader.FieldCount; i++)
+                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                results.Add(row);
+            }
+
+            return results;
+        }
+        finally
+        {
+            if (ownConnection) connection.Dispose();
+        }
+    }
+
+    private static string AppendCatalog(string connectionString, string catalogName) =>
+        connectionString.TrimEnd(';') + $";Initial Catalog={catalogName}";
+
+    /// <summary>
     /// Opens a fresh dedicated ADOMD connection for trace collection.
     /// Caller (TraceCollector) owns the lifetime and must dispose.
     /// </summary>
@@ -197,7 +295,15 @@ public sealed class ConnectionManager : IAsyncDisposable
         return _powerBiMsalApp;
     }
 
-    private static async Task<AuthenticationResult> AcquireTokenAsync(
+    /// <summary>
+    /// Optional override for interactive token acquisition. Set by the Desktop project
+    /// so that auth dialogs open on the UI thread with a proper window handle (required
+    /// for Windows broker / WAM on Windows 10/11). When null, falls back to calling
+    /// AcquireTokenInteractive directly (works for initial login from the UI thread).
+    /// </summary>
+    public Func<IPublicClientApplication, string[], Task<AuthenticationResult>>? InteractiveAuthProvider { get; set; }
+
+    private async Task<AuthenticationResult> AcquireTokenAsync(
         IPublicClientApplication app,
         CancellationToken ct)
     {
@@ -210,6 +316,11 @@ public sealed class ConnectionManager : IAsyncDisposable
         }
         catch (MsalUiRequiredException)
         {
+            // Interactive auth needs a window handle in WPF. If the Desktop project
+            // registered an InteractiveAuthProvider, use it (runs on UI dispatcher).
+            if (InteractiveAuthProvider is not null)
+                return await InteractiveAuthProvider(app, PowerBiScopes);
+
             return await app
                 .AcquireTokenInteractive(PowerBiScopes)
                 .WithPrompt(Prompt.SelectAccount)
@@ -239,13 +350,13 @@ public sealed class ConnectionManager : IAsyncDisposable
 
         state.TomServer ??= new Server();
         if (!state.TomServer.Connected)
-            state.TomServer.Connect(cs);
+            await Task.Run(() => state.TomServer.Connect(cs), ct);
 
         if (state.PollConnection is null || state.PollConnection.State != System.Data.ConnectionState.Open)
         {
             state.PollConnection?.Dispose();
             state.PollConnection = new AdomdConnection(cs);
-            state.PollConnection.Open();
+            await Task.Run(() => state.PollConnection.Open(), ct);
         }
 
         state.ConnectionError = null;
@@ -258,6 +369,32 @@ public sealed class ConnectionManager : IAsyncDisposable
 
         var token = await AcquireTokenAsync(state.MsalApp, ct);
         return $"Data Source={state.Context.ConnectionString};Password={token.AccessToken}";
+    }
+
+    /// <summary>
+    /// Disconnects and removes a tenant. Safe to call even if the tenant is active.
+    /// </summary>
+    public async Task RemoveTenantAsync(string tenantId)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            if (!_tenants.TryGetValue(tenantId, out var state)) return;
+            _tenants.Remove(tenantId);
+            if (_activeTenantId == tenantId) _activeTenantId = null;
+            await state.DisposeAsync();
+
+            // Dispose any catalog-scoped servers for this tenant
+            var catalogKeys = _catalogServers.Keys
+                .Where(k => k.Item1 == tenantId).ToList();
+            foreach (var key in catalogKeys)
+            {
+                _catalogServers[key].Disconnect();
+                _catalogServers[key].Dispose();
+                _catalogServers.Remove(key);
+            }
+        }
+        finally { _lock.Release(); }
     }
 
     private TenantState GetState(string tenantId)
@@ -275,6 +412,14 @@ public sealed class ConnectionManager : IAsyncDisposable
         foreach (var state in _tenants.Values)
             await state.DisposeAsync();
         _tenants.Clear();
+
+        foreach (var server in _catalogServers.Values)
+        {
+            server.Disconnect();
+            server.Dispose();
+        }
+        _catalogServers.Clear();
+
         _lock.Dispose();
         _msalInitLock.Dispose();
     }

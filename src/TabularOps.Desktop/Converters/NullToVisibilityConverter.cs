@@ -47,3 +47,25 @@ public sealed class BoolToVisibleConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// Multiplies (double totalWidth) × (double ratio) to produce a pixel width.
+/// Used by the partition-cell fill bar: Width = ActualWidth × FillRatio.
+/// </summary>
+public sealed class RatioWidthMultiConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 2
+            && values[0] is double totalWidth
+            && values[1] is double ratio)
+        {
+            return Math.Max(0, totalWidth * ratio);
+        }
+
+        return 0.0;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
