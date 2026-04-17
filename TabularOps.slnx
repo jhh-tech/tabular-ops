@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TabularOps.Core/TabularOps.Core.csproj" />
+    <Project Path="src/TabularOps.Desktop/TabularOps.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TabularOps.Core.Tests/TabularOps.Core.Tests.csproj" />
+  </Folder>
+</Solution>
