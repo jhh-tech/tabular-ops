@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tabular Ops Console — UI Sketch</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #0a0d10;
+  --bg-1: #11151a;
+  --bg-2: #161b21;
+  --bg-3: #1e242c;
+  --bg-hover: #232a33;
+  --border: #2a313b;
+  --border-strong: #3a424e;
+  --text-0: #e8ecef;
+  --text-1: #aab3bd;
+  --text-2: #6b7684;
+  --text-3: #4a5360;
+  --accent: #4ec9b0;
+  --accent-dim: #2f7a6a;
+  --warn: #e4a853;
+  --error: #e06c75;
+  --success: #98c379;
+  --info: #61afef;
+  --violet: #c586c0;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ TOP BAR ============ */
+.topbar {
+  height: 38px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.logo::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.tenant-switcher {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 3px;
+  color: var(--text-0);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.tenant-switcher:hover { background: var(--bg-hover); }
+.tenant-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success);
+}
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.status-indicator {
+  display: flex; align-items: center; gap: 6px;
+}
+.pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 0 var(--success);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(152, 195, 121, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(152, 195, 121, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(152, 195, 121, 0); }
+}
+
+/* ============ MAIN LAYOUT ============ */
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: calc(100vh - 38px - 22px);
+}
+
+/* ============ SIDEBAR ============ */
+.sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-section {
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header {
+  padding: 8px 12px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sidebar-header .count {
+  background: var(--bg-3);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+.nav-item {
+  padding: 6px 12px 6px 28px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { background: var(--bg-2); color: var(--text-0); }
+.nav-item.active {
+  background: var(--bg-2);
+  color: var(--text-0);
+  border-left-color: var(--accent);
+}
+.nav-item .icon {
+  width: 12px; height: 12px;
+  display: inline-block;
+  font-family: var(--mono);
+  color: var(--text-2);
+  font-size: 11px;
+}
+.nav-item.active .icon { color: var(--accent); }
+
+.model-tree {
+  padding: 4px 0;
+}
+.model-group {
+  padding: 4px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.model-group:hover { color: var(--text-0); }
+.model-item {
+  padding: 4px 12px 4px 28px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+}
+.model-item:hover { background: var(--bg-2); color: var(--text-0); }
+.model-item.active { background: var(--bg-2); color: var(--text-0); }
+.model-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 2px;
+  height: 20px;
+  background: var(--accent);
+}
+.model-status {
+  width: 6px; height: 6px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.model-status.ok { background: var(--success); }
+.model-status.refresh { background: var(--info); animation: pulse-blue 1.5s infinite; }
+.model-status.warn { background: var(--warn); }
+.model-status.err { background: var(--error); }
+@keyframes pulse-blue {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ============ MAIN CONTENT ============ */
+.main {
+  background: var(--bg-0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.breadcrumb {
+  padding: 10px 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.breadcrumb .current { color: var(--text-0); }
+.breadcrumb-sep { color: var(--text-3); }
+
+/* ============ TABS ============ */
+.tabs {
+  display: flex;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px;
+  gap: 2px;
+}
+.tab {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.tab:hover { color: var(--text-0); }
+.tab.active {
+  color: var(--text-0);
+  border-bottom-color: var(--accent);
+}
+.tab-badge {
+  background: var(--bg-3);
+  color: var(--text-1);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.tab.active .tab-badge { background: var(--accent-dim); color: var(--accent); }
+
+/* ============ CONTENT AREA ============ */
+.content {
+  flex: 1;
+  overflow: hidden;
+  display: none;
+}
+.content.active { display: flex; flex-direction: column; }
+
+/* ============ PARTITION MAP VIEW ============ */
+.toolbar {
+  padding: 10px 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 5px 12px;
+  font-family: var(--sans);
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+.btn.primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn.primary:hover { background: var(--accent); color: var(--bg-0); }
+.btn.danger { color: var(--error); }
+.btn.danger:hover { background: rgba(224, 108, 117, 0.1); border-color: var(--error); }
+.btn .kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  padding: 1px 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  margin-left: 4px;
+}
+.search {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  border-radius: 3px;
+  width: 200px;
+}
+.search:focus { outline: none; border-color: var(--accent); }
+.filter-chip {
+  padding: 3px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-1);
+}
+.filter-chip.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.toolbar-spacer { flex: 1; }
+.meta-info {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  display: flex;
+  gap: 16px;
+}
+.meta-info .label { color: var(--text-3); }
+
+/* ============ PARTITION GRID ============ */
+.partition-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+.table-block {
+  margin-bottom: 24px;
+}
+.table-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.table-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+.table-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  display: flex;
+  gap: 14px;
+}
+.table-meta span strong { color: var(--text-0); font-weight: 500; }
+.table-action {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.partition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px;
+}
+.partition-cell {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 8px;
+  cursor: pointer;
+  position: relative;
+  font-family: var(--mono);
+  font-size: 10px;
+  transition: all 0.08s;
+}
+.partition-cell:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-3);
+}
+.partition-cell.selected {
+  border-color: var(--accent);
+  background: rgba(78, 201, 176, 0.08);
+}
+.partition-cell.refreshing {
+  border-color: var(--info);
+  background: rgba(97, 175, 239, 0.08);
+}
+.partition-cell.refreshing::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  height: 2px;
+  background: var(--info);
+  animation: progress 2s infinite;
+}
+@keyframes progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+.partition-cell.failed {
+  border-color: var(--error);
+  background: rgba(224, 108, 117, 0.06);
+}
+.partition-cell.stale {
+  opacity: 0.55;
+}
+.partition-cell-label {
+  color: var(--text-0);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.partition-cell-meta {
+  color: var(--text-2);
+  font-size: 9px;
+  display: flex;
+  justify-content: space-between;
+}
+.partition-cell-bar {
+  height: 2px;
+  background: var(--bg-3);
+  margin-top: 4px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+.partition-cell-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Selection tray */
+.selection-tray {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 100;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.selection-tray.visible { transform: translateX(-50%) translateY(0); }
+.selection-tray .count {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============ LIVE TRACE VIEW ============ */
+.trace-toolbar {
+  padding: 8px 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.trace-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-0);
+}
+.rec-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--error);
+  animation: rec-blink 1s infinite;
+}
+@keyframes rec-blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.3; }
+}
+.event-filters {
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+}
+.trace-container {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  overflow: hidden;
+}
+.trace-list {
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.trace-row {
+  display: grid;
+  grid-template-columns: 90px 100px 130px 1fr 80px 80px;
+  gap: 12px;
+  padding: 5px 16px;
+  border-bottom: 1px solid var(--bg-2);
+  cursor: pointer;
+  align-items: center;
+}
+.trace-row:hover { background: var(--bg-1); }
+.trace-row.selected { background: var(--bg-2); }
+.trace-row .ts { color: var(--text-2); }
+.trace-row .evt { color: var(--info); }
+.trace-row .evt.progress { color: var(--violet); }
+.trace-row .evt.error { color: var(--error); }
+.trace-row .evt.query { color: var(--accent); }
+.trace-row .obj { color: var(--text-0); font-weight: 500; }
+.trace-row .msg {
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trace-row .dur { color: var(--text-2); text-align: right; }
+.trace-row .rows { color: var(--text-2); text-align: right; }
+.trace-row.err .msg { color: var(--error); }
+
+.trace-detail {
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+  padding: 10px 16px;
+  height: 180px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.trace-detail-header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-2);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.trace-detail pre {
+  color: var(--text-1);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.kw-blue { color: var(--info); }
+.kw-teal { color: var(--accent); }
+.kw-red { color: var(--error); }
+
+/* ============ STATUS BAR ============ */
+.statusbar {
+  height: 22px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+}
+.statusbar .section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.statusbar .section.right { margin-left: auto; }
+.statusbar .section strong { color: var(--text-0); font-weight: 500; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-0); }
+::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  align-items: center;
+}
+.legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 1px;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">TABULAR.OPS</div>
+  <div class="tenant-switcher">
+    <span class="tenant-dot"></span>
+    <span>contoso-prod</span>
+    <span style="color:var(--text-3)">▾</span>
+  </div>
+  <div class="tenant-switcher" style="opacity:0.6">
+    <span style="color:var(--text-2);font-size:10px">workspace</span>
+    <span>Finance Analytics</span>
+    <span style="color:var(--text-3)">▾</span>
+  </div>
+  <div class="topbar-right">
+    <div class="status-indicator">
+      <span class="pulse"></span>
+      <span>XMLA connected</span>
+    </div>
+    <span>johan@acme.se</span>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-header">
+        <span>VIEWS</span>
+      </div>
+      <div class="nav-item"><span class="icon">◉</span> Overview</div>
+      <div class="nav-item active" data-view="partitions"><span class="icon">▦</span> Partitions</div>
+      <div class="nav-item" data-view="trace"><span class="icon">≡</span> Live Trace</div>
+      <div class="nav-item"><span class="icon">↻</span> Refresh History</div>
+      <div class="nav-item"><span class="icon">⚡</span> Sessions</div>
+      <div class="nav-item"><span class="icon">▶</span> DAX Query</div>
+      <div class="nav-item"><span class="icon">☗</span> Roles / RLS</div>
+      <div class="nav-item"><span class="icon">▤</span> DMV</div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-header">
+        <span>MODELS</span>
+        <span class="count">12</span>
+      </div>
+      <div class="model-tree">
+        <div class="model-group">▼ contoso-prod <span style="margin-left:auto;color:var(--success);font-size:9px">●</span></div>
+        <div class="model-item"><span class="model-status ok"></span> Sales_Datamart</div>
+        <div class="model-item active" style="position:relative"><span class="model-status refresh"></span> Finance_Analytics</div>
+        <div class="model-item"><span class="model-status ok"></span> HR_Metrics</div>
+        <div class="model-item"><span class="model-status warn"></span> Inventory_Forecast</div>
+        <div class="model-item"><span class="model-status err"></span> Marketing_Attribution</div>
+
+        <div class="model-group" style="margin-top:8px">▼ bokklubb-dev</div>
+        <div class="model-item"><span class="model-status ok"></span> Klubb_Datalager</div>
+        <div class="model-item"><span class="model-status ok"></span> Royalty_Model</div>
+
+        <div class="model-group" style="margin-top:8px">▶ fabric-sandbox <span style="color:var(--text-3);font-size:9px;margin-left:auto">5</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="breadcrumb">
+      <span>contoso-prod</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>Finance Analytics</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="current">Finance_Analytics</span>
+      <span style="margin-left:auto;color:var(--text-3)">CL 1600 · last refresh 14:02:33</span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="partitions">Partitions <span class="tab-badge">47</span></div>
+      <div class="tab" data-tab="trace">Live Trace <span class="tab-badge" style="background:var(--error);color:var(--bg-0)">REC</span></div>
+      <div class="tab" data-tab="history">History</div>
+      <div class="tab" data-tab="sessions">Sessions <span class="tab-badge">3</span></div>
+      <div class="tab" data-tab="dax">DAX Query</div>
+    </div>
+
+    <!-- PARTITIONS VIEW -->
+    <div class="content active" id="content-partitions">
+      <div class="toolbar">
+        <button class="btn primary" onclick="showTray()">↻ Refresh selected <span class="kbd">⌘R</span></button>
+        <button class="btn">⎘ Merge</button>
+        <button class="btn">＋ New partition</button>
+        <button class="btn danger">✕ Drop</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <span class="filter-chip active">All</span>
+        <span class="filter-chip">Stale</span>
+        <span class="filter-chip">Failed</span>
+        <span class="filter-chip">Refreshing</span>
+        <input class="search" placeholder="filter partitions...  /" />
+        <div class="toolbar-spacer"></div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:var(--bg-2);border:1px solid var(--border)"></span>OK</span>
+          <span><span class="legend-dot" style="background:rgba(97,175,239,0.15);border:1px solid var(--info)"></span>Refreshing</span>
+          <span><span class="legend-dot" style="background:rgba(224,108,117,0.1);border:1px solid var(--error)"></span>Failed</span>
+        </div>
+      </div>
+
+      <div class="partition-scroll">
+
+        <!-- FactSales: incremental partitioned -->
+        <div class="table-block">
+          <div class="table-header">
+            <span class="table-name">FactSales</span>
+            <div class="table-meta">
+              <span><span class="label">rows</span> <strong>142.6M</strong></span>
+              <span><span class="label">size</span> <strong>3.2 GB</strong></span>
+              <span><span class="label">partitions</span> <strong>24</strong></span>
+              <span><span class="label">policy</span> <strong>Incremental · 2y / 30d</strong></span>
+            </div>
+            <span class="table-action">Refresh table ▸</span>
+          </div>
+          <div class="partition-grid" id="fact-grid">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- FactInventory -->
+        <div class="table-block">
+          <div class="table-header">
+            <span class="table-name">FactInventory</span>
+            <div class="table-meta">
+              <span><span class="label">rows</span> <strong>28.1M</strong></span>
+              <span><span class="label">size</span> <strong>612 MB</strong></span>
+              <span><span class="label">partitions</span> <strong>12</strong></span>
+              <span><span class="label">policy</span> <strong>Incremental · 1y / 7d</strong></span>
+            </div>
+            <span class="table-action">Refresh table ▸</span>
+          </div>
+          <div class="partition-grid" id="inv-grid"></div>
+        </div>
+
+        <!-- DimProduct -->
+        <div class="table-block">
+          <div class="table-header">
+            <span class="table-name">DimProduct</span>
+            <div class="table-meta">
+              <span><span class="label">rows</span> <strong>42,118</strong></span>
+              <span><span class="label">size</span> <strong>8.4 MB</strong></span>
+              <span><span class="label">partitions</span> <strong>1</strong></span>
+              <span><span class="label">policy</span> <strong>Full refresh</strong></span>
+            </div>
+            <span class="table-action">Refresh table ▸</span>
+          </div>
+          <div class="partition-grid">
+            <div class="partition-cell">
+              <div class="partition-cell-label">DimProduct</div>
+              <div class="partition-cell-meta"><span>42.1K</span><span>14:02:11</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DimCustomer -->
+        <div class="table-block">
+          <div class="table-header">
+            <span class="table-name">DimCustomer</span>
+            <div class="table-meta">
+              <span><span class="label">rows</span> <strong>1.8M</strong></span>
+              <span><span class="label">size</span> <strong>184 MB</strong></span>
+              <span><span class="label">partitions</span> <strong>4</strong></span>
+              <span><span class="label">policy</span> <strong>Manual</strong></span>
+            </div>
+            <span class="table-action">Refresh table ▸</span>
+          </div>
+          <div class="partition-grid" id="cust-grid"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LIVE TRACE VIEW -->
+    <div class="content" id="content-trace">
+      <div class="trace-toolbar">
+        <div class="trace-status">
+          <span class="rec-dot"></span>
+          <span>RECORDING</span>
+          <span style="color:var(--text-2)">· 847 events · 03:42 elapsed</span>
+        </div>
+        <div class="event-filters">
+          <span class="filter-chip active">Progress</span>
+          <span class="filter-chip active">Query</span>
+          <span class="filter-chip active">Errors</span>
+          <span class="filter-chip">Lock</span>
+          <span class="filter-chip">Audit</span>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <button class="btn">▣ Pause</button>
+        <button class="btn">⊘ Clear</button>
+        <button class="btn">⇩ Export</button>
+      </div>
+
+      <div class="trace-container">
+        <div class="trace-list" id="trace-list"></div>
+        <div class="trace-detail">
+          <div class="trace-detail-header">
+            <span>EVENT DETAIL · ProgressReportError · 14:06:22.184</span>
+            <span style="color:var(--text-2)">Ctrl+C to copy</span>
+          </div>
+          <pre><span class="kw-red">Error:</span> OLE DB or ODBC error: The server principal "<span class="kw-teal">svc-fabric-etl</span>" 
+  is not able to access the database "<span class="kw-teal">FinanceDW</span>" under the current security context.
+
+<span class="kw-blue">Partition:</span>  FactSales.202511
+<span class="kw-blue">Source:</span>     SELECT * FROM dbo.vw_FactSales_Increment 
+              WHERE OrderDate >= '2025-11-01' AND OrderDate &lt; '2025-12-01'
+<span class="kw-blue">Duration:</span>   0:00:02.41
+<span class="kw-blue">Attempt:</span>    2 of 3 (retry in 14:06:52)</pre>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="section">
+    <span style="color:var(--success)">●</span>
+    <span>Finance_Analytics</span>
+  </div>
+  <div class="section">
+    <span class="label">mem</span>
+    <strong>2.84 / 10 GB</strong>
+  </div>
+  <div class="section">
+    <span class="label">sessions</span>
+    <strong>3</strong>
+  </div>
+  <div class="section">
+    <span class="label">queue</span>
+    <strong>2 refresh · 0 query</strong>
+  </div>
+  <div class="section right">
+    <span>TE3 compat 1600</span>
+  </div>
+  <div class="section">
+    <span>XMLA r/w</span>
+  </div>
+  <div class="section">
+    <span>v0.4.2-alpha</span>
+  </div>
+</div>
+
+<!-- SELECTION TRAY -->
+<div class="selection-tray" id="tray">
+  <span><span class="count" id="tray-count">3</span> partitions selected</span>
+  <span style="color:var(--text-3)">│</span>
+  <span style="color:var(--text-2)">est. 12.4M rows · ~2m 15s</span>
+  <button class="btn primary">↻ Refresh (full)</button>
+  <button class="btn">↻ Refresh (data only)</button>
+  <button class="btn">⎘ Merge</button>
+  <button class="btn danger">✕</button>
+</div>
+
+<script>
+// ====== Partition grid generation ======
+const now = new Date();
+function formatRelTime(hoursAgo) {
+  if (hoursAgo < 1) return Math.floor(hoursAgo * 60) + 'm';
+  if (hoursAgo < 24) return Math.floor(hoursAgo) + 'h';
+  return Math.floor(hoursAgo / 24) + 'd';
+}
+
+function buildPartitions(gridId, prefix, count, options = {}) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for (let i = 0; i < count; i++) {
+    const monthIdx = (11 - (count - 1 - i) + 12) % 12;
+    const year = monthIdx > 11 - (count - 1 - i) ? 2024 : 2025;
+    const label = `${prefix}.${year}${String(monthIdx+1).padStart(2,'0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'partition-cell';
+
+    // status distribution
+    let statusClass = '';
+    let metaRight = formatRelTime(Math.random() * 48 + 1) + ' ago';
+    if (i === count - 1 && options.current) {
+      statusClass = 'refreshing';
+      metaRight = 'now';
+    } else if (options.failures && options.failures.includes(i)) {
+      statusClass = 'failed';
+      metaRight = 'failed';
+    } else if (i < count - 8 && Math.random() > 0.7) {
+      statusClass = 'stale';
+    }
+    if (statusClass) cell.classList.add(statusClass);
+
+    const rows = Math.floor(Math.random() * 2000000 + 500000);
+    const rowStr = rows > 1000000 ? (rows/1000000).toFixed(1) + 'M' : (rows/1000).toFixed(0) + 'K';
+    const fill = Math.floor(Math.random() * 80 + 20);
+
+    cell.innerHTML = `
+      <div class="partition-cell-label">${label}</div>
+      <div class="partition-cell-meta">
+        <span>${rowStr}</span>
+        <span>${metaRight}</span>
+      </div>
+      <div class="partition-cell-bar"><div class="partition-cell-bar-fill" style="width:${fill}%"></div></div>
+    `;
+    cell.addEventListener('click', (e) => {
+      cell.classList.toggle('selected');
+      updateTray();
+    });
+    grid.appendChild(cell);
+  }
+}
+
+buildPartitions('fact-grid', 'FactSales', 24, { current: true, failures: [22] });
+buildPartitions('inv-grid', 'FactInventory', 12, {});
+buildPartitions('cust-grid', 'DimCustomer', 4, {});
+
+// pre-select a few for demo
+document.querySelectorAll('#fact-grid .partition-cell').forEach((c, i) => {
+  if (i === 21 || i === 22 || i === 23) c.classList.add('selected');
+});
+
+// ====== Selection tray ======
+function updateTray() {
+  const selected = document.querySelectorAll('.partition-cell.selected').length;
+  const tray = document.getElementById('tray');
+  if (selected > 0) {
+    tray.classList.add('visible');
+    document.getElementById('tray-count').textContent = selected;
+  } else {
+    tray.classList.remove('visible');
+  }
+}
+updateTray();
+
+// ====== Tab switching ======
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    if (!target) return;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    const el = document.getElementById('content-' + target);
+    if (el) el.classList.add('active');
+  });
+});
+
+document.querySelectorAll('.nav-item[data-view]').forEach(nav => {
+  nav.addEventListener('click', () => {
+    const target = nav.dataset.view;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    nav.classList.add('active');
+    const tab = document.querySelector(`.tab[data-tab="${target}"]`);
+    if (tab) tab.click();
+  });
+});
+
+// ====== Trace event generation ======
+const traceEvents = [
+  { ts: '14:06:22.184', type: 'error', evt: 'ProgressReportError', obj: 'FactSales.202511', msg: 'OLE DB error: principal not able to access database FinanceDW', dur: '2.41s', rows: '—' },
+  { ts: '14:06:19.772', type: 'progress', evt: 'ProgressReportBegin', obj: 'FactSales.202511', msg: 'Processing partition (retry 2/3)', dur: '...', rows: '—' },
+  { ts: '14:06:18.104', type: 'progress', evt: 'ProgressReportEnd', obj: 'FactSales.202510', msg: 'Partition processed successfully', dur: '8.21s', rows: '1.4M' },
+  { ts: '14:06:09.890', type: 'progress', evt: 'ProgressReportCurrent', obj: 'FactSales.202510', msg: 'Read 1,421,308 rows from source', dur: '—', rows: '1.4M' },
+  { ts: '14:06:09.884', type: 'progress', evt: 'ProgressReportBegin', obj: 'FactSales.202510', msg: 'Processing partition', dur: '...', rows: '—' },
+  { ts: '14:06:09.102', type: 'query', evt: 'QueryEnd', obj: 'vw_FactSales_Increment', msg: 'SELECT OrderKey, OrderDate, CustomerKey, ProductKey, UnitPrice, Quantity FROM dbo.vw...', dur: '7.80s', rows: '1.4M' },
+  { ts: '14:06:01.302', type: 'query', evt: 'QueryBegin', obj: 'vw_FactSales_Increment', msg: 'Source query execution started', dur: '...', rows: '—' },
+  { ts: '14:06:01.118', type: 'progress', evt: 'ProgressReportEnd', obj: 'FactSales.202509', msg: 'Partition processed successfully', dur: '6.94s', rows: '1.3M' },
+  { ts: '14:05:54.181', type: 'progress', evt: 'ProgressReportCurrent', obj: 'FactSales.202509', msg: 'Read 1,312,442 rows from source', dur: '—', rows: '1.3M' },
+  { ts: '14:05:54.174', type: 'progress', evt: 'ProgressReportBegin', obj: 'FactSales.202509', msg: 'Processing partition', dur: '...', rows: '—' },
+  { ts: '14:05:51.092', type: 'query', evt: 'QueryBegin', obj: 'DimCustomer', msg: 'EVALUATE TOPN(100, DimCustomer, DimCustomer[LastModified], DESC)', dur: '...', rows: '—' },
+  { ts: '14:05:48.771', type: 'progress', evt: 'CommandBegin', obj: 'Refresh operation', msg: 'TMSL: refresh { type: full, objects: [FactSales.202509, .202510, .202511] }', dur: '...', rows: '—' },
+];
+
+const list = document.getElementById('trace-list');
+traceEvents.forEach((e, i) => {
+  const row = document.createElement('div');
+  row.className = 'trace-row' + (e.type === 'error' ? ' err' : '') + (i === 0 ? ' selected' : '');
+  row.innerHTML = `
+    <span class="ts">${e.ts}</span>
+    <span class="evt ${e.type}">${e.evt}</span>
+    <span class="obj">${e.obj}</span>
+    <span class="msg">${e.msg}</span>
+    <span class="dur">${e.dur}</span>
+    <span class="rows">${e.rows}</span>
+  `;
+  row.addEventListener('click', () => {
+    document.querySelectorAll('.trace-row').forEach(r => r.classList.remove('selected'));
+    row.classList.add('selected');
+  });
+  list.appendChild(row);
+});
+
+// ====== Simulate live trace ticker ======
+let eventCount = 847;
+setInterval(() => {
+  eventCount++;
+  const statusText = document.querySelector('.trace-status span:nth-child(3)');
+  if (statusText) statusText.textContent = `· ${eventCount} events · 03:${(42 + Math.floor(eventCount/20)) % 60} elapsed`;
+}, 1200);
+
+function showTray() {
+  // demo
+}
+</script>
+</body>
+</html>
