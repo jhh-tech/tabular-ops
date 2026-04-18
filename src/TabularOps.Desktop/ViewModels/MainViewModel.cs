@@ -33,11 +33,52 @@ public partial class MainViewModel : ObservableObject
         .Select(t => t.UserPrincipalName)
         .FirstOrDefault(u => u is not null);
 
+    // ── Active model context bar ──────────────────────────────────────────────
+
+    public bool HasActiveModel => ActiveModel is not null;
+
+    public string? ActiveEndpointLabel => ActiveModel?.Model.EndpointType switch
+    {
+        EndpointType.PowerBi => "Power BI",
+        EndpointType.Aas     => "Azure AS",
+        EndpointType.Ssas    => "SQL Server AS",
+        _ => null,
+    };
+
+    public string? ActiveCompatibilityLabel =>
+        ActiveModel is null ? null : $"CL {ActiveModel.Model.CompatibilityLevel}";
+
+    public int ActiveWorkspaceModelCount =>
+        ActiveModel is null
+            ? 0
+            : Tenants.FirstOrDefault(t => t.Models.Contains(ActiveModel))?.Models.Count ?? 0;
+
+    // Capacity info — populated for Power BI workspaces on dedicated capacity
+    public string? ActiveCapacityName   => ActiveTenant?.Context.CapacityName;
+    public string? ActiveCapacitySku    => ActiveTenant?.Context.CapacitySku;
+    public string? ActiveCapacityRegion => ActiveTenant?.Context.CapacityRegion;
+
+    public bool HasCapacityInfo =>
+        ActiveModel?.Model.EndpointType == EndpointType.PowerBi
+        && ActiveCapacitySku is not null;
+
+    private void RaiseActiveContextChanged()
+    {
+        OnPropertyChanged(nameof(HasActiveModel));
+        OnPropertyChanged(nameof(ActiveEndpointLabel));
+        OnPropertyChanged(nameof(ActiveCompatibilityLabel));
+        OnPropertyChanged(nameof(ActiveWorkspaceModelCount));
+        OnPropertyChanged(nameof(ActiveCapacityName));
+        OnPropertyChanged(nameof(ActiveCapacitySku));
+        OnPropertyChanged(nameof(ActiveCapacityRegion));
+        OnPropertyChanged(nameof(HasCapacityInfo));
+    }
+
     public MainViewModel(ConnectionManager connectionManager, ConnectionStore connectionStore)
     {
         _connectionManager = connectionManager;
         _connectionStore = connectionStore;
-        PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine);
+        PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine, App.PartitionCache);
         History = new HistoryViewModel(App.RefreshHistory, connectionManager);
     }
 
@@ -58,10 +99,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnActiveTenantChanged(TenantNodeViewModel? value)
     {
         StatusBar.UpdateFromContext(value?.Context);
+        RaiseActiveContextChanged();
     }
 
     partial void OnActiveModelChanged(ModelNodeViewModel? value)
     {
+        RaiseActiveContextChanged();
         if (ActiveTenant is null || value is null) return;
         ActiveTenant.Context.ActiveModel = value.Model;
 
@@ -136,9 +179,17 @@ public partial class MainViewModel : ObservableObject
             // For Power BI it acquires the token silently from the MSAL cache on disk.
             var registered = saved.EndpointType == EndpointType.PowerBi
                 ? await _connectionManager.AddPowerBiTenantAsync(
-                    saved.ConnectionString, saved.DisplayName, ct)
+                    saved.ConnectionString, saved.DisplayName, ct: ct)
                 : await _connectionManager.AddSsasTenantAsync(
                     saved.ConnectionString, saved.DisplayName, ct);
+
+            // Restore capacity info that was persisted by ConnectionStore
+            if (saved.CapacityName is not null)
+            {
+                registered.CapacityName   = saved.CapacityName;
+                registered.CapacityRegion = saved.CapacityRegion;
+                registered.CapacitySku    = saved.CapacitySku;
+            }
 
             // Propagate UPN so the sidebar can show which Entra account owns this workspace
             if (registered.UserPrincipalName is not null)

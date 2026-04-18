@@ -27,6 +27,9 @@ public sealed class ConnectionStore
             ConnectionString = c.ConnectionString,
             EndpointType = c.EndpointType,
             TokenCacheFilePath = c.TokenCacheFilePath,
+            CapacityName = c.CapacityName,
+            CapacityRegion = c.CapacityRegion,
+            CapacitySku = c.CapacitySku,
         }).ToList();
 
         Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
@@ -49,6 +52,9 @@ public sealed class ConnectionStore
                 ConnectionString = e.ConnectionString,
                 EndpointType = e.EndpointType,
                 TokenCacheFilePath = e.TokenCacheFilePath,
+                CapacityName = e.CapacityName,
+                CapacityRegion = e.CapacityRegion,
+                CapacitySku = e.CapacitySku,
             }).ToList();
         }
         catch (JsonException)
@@ -64,5 +70,8 @@ public sealed class ConnectionStore
         public string ConnectionString { get; set; } = string.Empty;
         public EndpointType EndpointType { get; set; }
         public string? TokenCacheFilePath { get; set; }
+        public string? CapacityName { get; set; }
+        public string? CapacityRegion { get; set; }
+        public string? CapacitySku { get; set; }
     }
 }

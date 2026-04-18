@@ -53,6 +53,19 @@ public sealed class RefreshHistoryStore : IAsyncDisposable
                 WHERE external_id IS NOT NULL;
             """;
         idxCmd.ExecuteNonQuery();
+
+        // Mark any Running entry started more than 30 minutes ago as Cancelled.
+        // These are orphaned rows from sessions where the app closed during a refresh.
+        using var cleanupCmd = _db.CreateCommand();
+        cleanupCmd.CommandText = """
+            UPDATE refresh_runs
+            SET    status       = 'Cancelled',
+                   completed_at = started_at,
+                   error_message = 'Cancelled: app was closed before this refresh completed'
+            WHERE  status = 'Running'
+              AND  started_at < datetime('now', '-30 minutes');
+            """;
+        cleanupCmd.ExecuteNonQuery();
     }
 
     private void MigrateAddColumnIfMissing(string column, string definition)

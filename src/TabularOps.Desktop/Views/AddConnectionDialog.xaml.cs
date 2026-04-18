@@ -146,13 +146,17 @@ public partial class AddConnectionDialog : Window
             {
                 if (_checkedNames.Count == 0) { ShowError("Please select at least one workspace."); return; }
 
+                // Build name→WorkspaceInfo lookup so capacity details flow through
+                var infoByName = _allWorkspaces.ToDictionary(w => w.Name, StringComparer.OrdinalIgnoreCase);
+
                 var contexts = new List<TenantContext>();
                 foreach (var name in _checkedNames)
                 {
                     var connectionString = "powerbi://api.powerbi.com/v1.0/myorg/" +
                         Uri.EscapeDataString(name);
+                    infoByName.TryGetValue(name, out var workspaceInfo);
                     contexts.Add(await App.ConnectionManager
-                        .AddPowerBiTenantAsync(connectionString, name));
+                        .AddPowerBiTenantAsync(connectionString, name, workspaceInfo));
                 }
 
                 ResultContexts = contexts;

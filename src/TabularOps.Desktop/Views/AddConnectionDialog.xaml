@@ -1,11 +1,11 @@
-<Window x:Class="TabularOps.Desktop.Views.AddConnectionDialog"
+﻿<Window x:Class="TabularOps.Desktop.Views.AddConnectionDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Add Connection"
         Width="480" SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg1}">
+        Background="{DynamicResource Bg1}">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -25,25 +25,25 @@
                    FontFamily="{StaticResource SansFont}"
                    FontSize="15"
                    FontWeight="SemiBold"
-                   Foreground="{StaticResource Text0}" />
+                   Foreground="{DynamicResource Text0}" />
 
         <!-- Type selector -->
         <StackPanel Grid.Row="2">
             <TextBlock Text="TYPE"
                        FontFamily="{StaticResource MonoFont}"
                        FontSize="10"
-                       Foreground="{StaticResource Text2}"
+                       Foreground="{DynamicResource Text2}"
                        Margin="0,0,0,6" />
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="RadioPowerBi" Content="Power BI / Fabric"
                              GroupName="EndpointType" IsChecked="True"
                              FontFamily="{StaticResource SansFont}"
-                             Foreground="{StaticResource Text0}"
+                             Foreground="{DynamicResource Text0}"
                              Margin="0,0,24,0" />
                 <RadioButton x:Name="RadioSsas" Content="SSAS / AAS"
                              GroupName="EndpointType"
                              FontFamily="{StaticResource SansFont}"
-                             Foreground="{StaticResource Text0}" />
+                             Foreground="{DynamicResource Text0}" />
             </StackPanel>
         </StackPanel>
 
@@ -54,7 +54,7 @@
             <StackPanel x:Name="StepSignIn">
                 <TextBlock FontFamily="{StaticResource SansFont}"
                            FontSize="12"
-                           Foreground="{StaticResource Text1}"
+                           Foreground="{DynamicResource Text1}"
                            TextWrapping="Wrap"
                            Margin="0,0,0,12">
                     Sign in to load the workspaces you have access to.
@@ -77,13 +77,13 @@
                                Text="WORKSPACES"
                                FontFamily="{StaticResource MonoFont}"
                                FontSize="10"
-                               Foreground="{StaticResource Text2}"
+                               Foreground="{DynamicResource Text2}"
                                VerticalAlignment="Center" />
                     <TextBlock x:Name="TxtSelectionCount"
                                Grid.Column="1"
                                FontFamily="{StaticResource MonoFont}"
                                FontSize="10"
-                               Foreground="{StaticResource Accent}"
+                               Foreground="{DynamicResource Accent}"
                                VerticalAlignment="Center"
                                Visibility="Collapsed" />
                 </Grid>
@@ -92,21 +92,21 @@
                 <TextBox x:Name="TxtSearch"
                          FontFamily="{StaticResource SansFont}"
                          FontSize="12"
-                         Foreground="{StaticResource Text0}"
-                         Background="{StaticResource Bg2}"
-                         BorderBrush="{StaticResource Border}"
+                         Foreground="{DynamicResource Text0}"
+                         Background="{DynamicResource Bg2}"
+                         BorderBrush="{DynamicResource Border}"
                          BorderThickness="1"
                          Padding="8,5"
                          Margin="0,0,0,4"
                          TextChanged="OnSearchChanged" />
 
                 <!-- Workspace checkbox list -->
-                <Border BorderBrush="{StaticResource Border}"
+                <Border BorderBrush="{DynamicResource Border}"
                         BorderThickness="1"
                         MaxHeight="220">
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
-                                  Background="{StaticResource Bg2}">
+                                  Background="{DynamicResource Bg2}">
                         <StackPanel x:Name="WorkspaceList" />
                     </ScrollViewer>
                 </Border>
@@ -118,14 +118,14 @@
             <TextBlock Text="DISPLAY NAME"
                        FontFamily="{StaticResource MonoFont}"
                        FontSize="10"
-                       Foreground="{StaticResource Text2}"
+                       Foreground="{DynamicResource Text2}"
                        Margin="0,0,0,4" />
             <TextBox x:Name="TxtDisplayName"
                      FontFamily="{StaticResource SansFont}"
                      FontSize="12"
-                     Foreground="{StaticResource Text0}"
-                     Background="{StaticResource Bg2}"
-                     BorderBrush="{StaticResource Border}"
+                     Foreground="{DynamicResource Text0}"
+                     Background="{DynamicResource Bg2}"
+                     BorderBrush="{DynamicResource Border}"
                      BorderThickness="1"
                      Padding="8,5"
                      Margin="0,0,0,12" />
@@ -133,21 +133,21 @@
             <TextBlock Text="CONNECTION STRING"
                        FontFamily="{StaticResource MonoFont}"
                        FontSize="10"
-                       Foreground="{StaticResource Text2}"
+                       Foreground="{DynamicResource Text2}"
                        Margin="0,0,0,4" />
             <TextBox x:Name="TxtConnectionString"
                      FontFamily="{StaticResource MonoFont}"
                      FontSize="11"
-                     Foreground="{StaticResource Text0}"
-                     Background="{StaticResource Bg2}"
-                     BorderBrush="{StaticResource Border}"
+                     Foreground="{DynamicResource Text0}"
+                     Background="{DynamicResource Bg2}"
+                     BorderBrush="{DynamicResource Border}"
                      BorderThickness="1"
                      Padding="8,5"
                      TextWrapping="Wrap" />
             <TextBlock Text="e.g. Data Source=myserver\tabular;Initial Catalog=MyModel"
                        FontFamily="{StaticResource MonoFont}"
                        FontSize="10"
-                       Foreground="{StaticResource Text3}"
+                       Foreground="{DynamicResource Text3}"
                        Margin="0,4,0,0" />
         </StackPanel>
 
@@ -156,7 +156,7 @@
                    Grid.Row="6"
                    FontFamily="{StaticResource SansFont}"
                    FontSize="11"
-                   Foreground="{StaticResource Error}"
+                   Foreground="{DynamicResource Error}"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"
                    Visibility="Collapsed" />

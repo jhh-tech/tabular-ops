@@ -4,6 +4,24 @@ using TabularOps.Core.Connection;
 namespace TabularOps.Core.Refresh;
 
 /// <summary>
+/// Refresh strategy exposed to callers. Maps to TOM's RefreshType so the UI
+/// layer doesn't need a direct dependency on the TOM assembly.
+/// </summary>
+public enum RefreshMode
+{
+    /// <summary>Automatic — AS decides which partitions need work (Process Default in SSMS).</summary>
+    Automatic,
+    /// <summary>Full data reload + recalculation.</summary>
+    Full,
+    /// <summary>Reload source data; skip recalculation pass.</summary>
+    DataOnly,
+    /// <summary>Recalculate calculated columns/measures; no data reload.</summary>
+    Calculate,
+    /// <summary>Drop all data from the partition (Process Clear in SSMS).</summary>
+    ClearValues,
+}
+
+/// <summary>
 /// Refreshes partitions via TOM RequestRefresh + SaveChanges.
 /// Used for SSAS/AAS and Power BI XMLA (read-write capacity).
 ///
@@ -22,11 +40,13 @@ public sealed class TomRefreshEngine
     }
 
     /// <param name="partitions">Partitions to refresh, as (tableName, partitionName) pairs.</param>
+    /// <param name="mode">Refresh strategy; defaults to Automatic (Process Default).</param>
     /// <param name="progress">Receives one event per partition when it starts and when the batch completes.</param>
     public async Task<IReadOnlyList<RefreshRun>> RefreshAsync(
         string tenantId,
         string databaseName,
         IReadOnlyList<(string TableName, string PartitionName)> partitions,
+        RefreshMode mode = RefreshMode.Automatic,
         IProgress<RefreshProgressEvent>? progress = null,
         CancellationToken ct = default)
     {
@@ -56,7 +76,7 @@ public sealed class TomRefreshEngine
                 ?? throw new InvalidOperationException(
                     $"Partition '{part}' not found in table '{tbl}'.");
 
-            tomPartition.RequestRefresh(RefreshType.Full);
+            tomPartition.RequestRefresh(ToTomRefreshType(mode));
         }
 
         // Send batch to server — SaveChanges is synchronous and blocks until done
@@ -65,6 +85,9 @@ public sealed class TomRefreshEngine
         try
         {
             await Task.Run(() => model.SaveChanges(), ct);
+            // Re-read partition metadata from the server so RefreshedTime reflects the
+            // actual completion time. SaveChanges doesn't always sync this back locally.
+            await Task.Run(() => db.Refresh(), ct);
         }
         catch (OperationCanceledException)
         {
@@ -101,6 +124,15 @@ public sealed class TomRefreshEngine
 
         return runs;
     }
+
+    private static RefreshType ToTomRefreshType(RefreshMode mode) => mode switch
+    {
+        RefreshMode.Full        => RefreshType.Full,
+        RefreshMode.DataOnly    => RefreshType.DataOnly,
+        RefreshMode.Calculate   => RefreshType.Calculate,
+        RefreshMode.ClearValues => RefreshType.ClearValues,
+        _                       => RefreshType.Automatic,
+    };
 }
 
 public sealed record RefreshProgressEvent(

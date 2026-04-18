@@ -4,6 +4,7 @@ using System.Windows.Interop;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Client;
 using TabularOps.Core.Connection;
+using TabularOps.Core.Dmv;
 using TabularOps.Core.Refresh;
 
 namespace TabularOps.Desktop;
@@ -14,6 +15,7 @@ public partial class App : Application
     public static ConnectionStore ConnectionStore { get; private set; } = null!;
     public static RefreshHistoryStore RefreshHistory { get; private set; } = null!;
     public static TomRefreshEngine RefreshEngine { get; private set; } = null!;
+    public static PartitionCacheStore PartitionCache { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,10 +35,13 @@ public partial class App : Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TabularOps");
 
+        ThemeManager.Initialize();
+
         ConnectionManager = new ConnectionManager(Path.Combine(appDataDir, "Cache"), clientId);
         ConnectionStore = new ConnectionStore(appDataDir);
         RefreshHistory = new RefreshHistoryStore(Path.Combine(appDataDir, "refresh-history.db"));
         RefreshEngine = new TomRefreshEngine(ConnectionManager, RefreshHistory);
+        PartitionCache = new PartitionCacheStore(Path.Combine(appDataDir, "partition-cache.db"));
 
         // Ensure interactive token acquisition always runs on the UI thread with the
         // main window handle — required for Windows broker (WAM) on Windows 10/11.

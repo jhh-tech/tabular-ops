@@ -41,6 +41,15 @@ public sealed class TenantContext
     /// </summary>
     public string? UserPrincipalName { get; set; }
 
+    /// <summary>Fabric / Premium capacity the workspace is assigned to. Null for SSAS / AAS.</summary>
+    public string? CapacityName { get; set; }
+
+    /// <summary>Azure region of the capacity (e.g. "West Europe"). Null when capacity unknown.</summary>
+    public string? CapacityRegion { get; set; }
+
+    /// <summary>Capacity SKU string (e.g. "F4", "P1", "PPU"). Null when capacity unknown.</summary>
+    public string? CapacitySku { get; set; }
+
     /// <summary>Unique key used for per-tenant SQLite DB file naming and MSAL cache keying.</summary>
     public string TenantId => EndpointType == EndpointType.PowerBi
         ? DeriveWorkspaceId(ConnectionString)

@@ -78,12 +78,36 @@ public sealed class ConnectionManager : IAsyncDisposable
         var credentials = new TokenCredentials(token.AccessToken, "Bearer");
         using var pbiClient = new PowerBIClient(credentials);
 
+        // Fetch capacity details — keyed by capacity ID.
+        // Returns only capacities where the user is admin; others are left null.
+        var capacityMap = new Dictionary<Guid, Microsoft.PowerBI.Api.Models.Capacity>();
+        try
+        {
+            var caps = await pbiClient.Capacities.GetCapacitiesAsync(cancellationToken: ct);
+            foreach (var c in caps.Value)
+                capacityMap[c.Id] = c;
+        }
+        catch { /* not a capacity admin, or API unavailable — capacity info stays null */ }
+
         var groups = await pbiClient.Groups.GetGroupsAsync(cancellationToken: ct);
         return groups.Value
             // Only workspaces on dedicated capacity support XMLA read-write
             .Where(g => g.IsOnDedicatedCapacity == true)
             .OrderBy(g => g.Name)
-            .Select(g => new Model.WorkspaceInfo(g.Id.ToString(), g.Name))
+            .Select(g =>
+            {
+                Microsoft.PowerBI.Api.Models.Capacity? cap = null;
+                if (g.CapacityId.HasValue)
+                    capacityMap.TryGetValue(g.CapacityId.Value, out cap);
+
+                return new Model.WorkspaceInfo(
+                    Id:            g.Id.ToString(),
+                    Name:          g.Name,
+                    CapacityId:    g.CapacityId?.ToString(),
+                    CapacityName:  cap?.DisplayName,
+                    CapacityRegion: cap?.Region,
+                    CapacitySku:   cap?.Sku);
+            })
             .ToList();
     }
 
@@ -94,6 +118,7 @@ public sealed class ConnectionManager : IAsyncDisposable
     public async Task<TenantContext> AddPowerBiTenantAsync(
         string connectionString,
         string displayName,
+        Model.WorkspaceInfo? workspaceInfo = null,
         CancellationToken ct = default)
     {
         var app = await GetOrCreatePowerBiAppAsync(ct);
@@ -104,6 +129,9 @@ public sealed class ConnectionManager : IAsyncDisposable
             ConnectionString = connectionString,
             EndpointType = EndpointType.PowerBi,
             TokenCacheFilePath = Path.Combine(_cacheDirectory, "powerbi", "msal.cache"),
+            CapacityName   = workspaceInfo?.CapacityName,
+            CapacityRegion = workspaceInfo?.CapacityRegion,
+            CapacitySku    = workspaceInfo?.CapacitySku,
         };
 
         await RegisterTenantAsync(context, app, ct);
