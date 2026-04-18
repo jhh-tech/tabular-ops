@@ -21,7 +21,7 @@ A data engineer or BI consultant who manages 5-15 deployed tabular models at onc
 ## Tech stack
 
 - **.NET 8** (C#)
-- **WPF** or **Avalonia** for UI (see `docs/decisions.md` — TBD)
+- **WPF** (Windows-only, x64 — see ADR-009)
 - **Microsoft.AnalysisServices** (TOM) — core model interaction
 - **Microsoft.AnalysisServices.AdomdClient** — DAX/MDX/DMV queries
 - **Microsoft.Identity.Client** (MSAL.NET) — Entra ID auth with per-tenant token caching
@@ -62,10 +62,11 @@ TabularOps/
 │   │   │   ├── TraceEvent.cs
 │   │   │   └── TraceEventChannel.cs
 │   │   ├── Dmv/
-│   │   │   └── DmvQueries.cs
+│   │   │   ├── DmvQueries.cs
+│   │   │   └── PartitionCacheStore.cs  # SQLite cache for fast model switching
 │   │   └── Model/                    # POCOs: ModelRef, PartitionRef, etc.
 │   │
-│   └── TabularOps.Desktop/           # WPF or Avalonia
+│   └── TabularOps.Desktop/           # WPF (Windows-only, x64)
 │       ├── Views/
 │       ├── ViewModels/
 │       └── App.xaml
@@ -84,41 +85,51 @@ TabularOps/
 
 Do NOT try to build everything at once. Follow this order — each milestone is usable on its own.
 
-### Milestone 1: Connect and browse (target: week 1)
-- `ConnectionManager` with MSAL interactive login + token cache
-- Sidebar model tree: populated from `Server.Databases` via TOM
-- Topbar tenant switcher with per-tenant isolation
-- Status bar shows connection state
-- **Done when:** user can log in to a Power BI tenant, see list of workspaces/models, click into one
+### ✅ Milestone 1: Connect and browse — DONE (commit 76aaaed)
+- `ConnectionManager` with MSAL interactive login + per-tenant token cache (DPAPI-encrypted on Windows)
+- Sidebar model tree grouped by workspace, populated from `Server.Databases` via TOM
+- Topbar tenant pill with connection status dot
+- Status bar: connection state + endpoint type + read-only badge
+- `AddConnectionDialog`: Power BI (OAuth → workspace picker) and SSAS/AAS (connection string) flows
+- Entra UPN shown above workspace list in sidebar after login
 
-### Milestone 2: Partition grid (target: week 2)
-- Partition map view driven by TOM `Model.Tables[].Partitions[]`
-- Row counts + sizes from `$SYSTEM.DISCOVER_STORAGE_TABLES` DMV
-- Read-only — no refresh actions yet
-- Filter chips (All / Stale / Failed / Refreshing)
-- **Done when:** for any connected model, the grid in the UI mockup renders correctly with real data
+### ✅ Milestone 2: Partition map — DONE (commit 34d7550)
+- Horizontal layout: table info panel on left (name, rows, size, last refresh, partition count), partition tiles on right
+- Two-phase loading: TOM structure first (fast), DMV stats enriched async
+- Partition tiles color-coded by state: teal=OK, amber=stale (dimmed), red=failed, blue=refreshing/queued
+- Fill bar at tile bottom shows relative partition size within the table
+- Click table info panel to select/deselect all partitions; click tiles to select individually
 
-### Milestone 3: Refresh engine (target: week 3)
-- Adapt `PartitionProcessor.cs` from `microsoft/Analysis-Services`
-- "Refresh selected" button triggers TOM refresh
-- Results persisted to SQLite
-- Basic history list view
-- **Done when:** user can select partitions, hit Refresh, see progress, see result stored
+### ✅ Milestone 3: Refresh engine — DONE (commit 3e850c4)
+- `TomRefreshEngine`: `RequestRefresh` + `SaveChanges` on background thread; `db.Refresh()` after commit to sync `RefreshedTime`
+- Refresh type selector: Default / Full / Data only / Calculate / Clear
+- `RefreshHistoryStore`: SQLite-backed; `LogStartAsync` / `LogCompleteAsync` per partition
+- History view with scatter chart (time-of-day × duration), run list, status badges
+- Power BI workspace sync: fetches refresh history from Enhanced Refresh REST API, deduplicates by `requestId`
+- History filtered by model when a model is selected; workspace-level when only a workspace is selected
+- Orphaned `Running` entries (app crash during refresh) auto-cancelled on startup after 30 min
 
-### Milestone 4: Live trace (target: week 4)
+### ✅ Milestone 4: UX polish — DONE (commit 61fbaae)
+- **Partition cache** (`PartitionCacheStore`): SQLite-backed; Phase 0 loads cache instantly on model switch; live data updates in background with pulsing progress bar indicator
+- **Refresh confirm dialog**: modal showing affected partitions grouped by table, refresh type, Cancel/Refresh with keyboard support
+- **Workspace context bar**: persistent row above tab strip showing workspace, endpoint type, CL level, model count; Fabric capacity name/SKU/region fetched from Power BI Capacities API and persisted
+- **ComboBox theming**: full custom `ControlTemplate` for ComboBox + ComboBoxItem using `DynamicResource` colors
+- **Light/dark theme toggle**: runtime swap via `ThemeManager`; preference persisted to disk; all controls use `{DynamicResource}` throughout
+
+### Milestone 5: Live trace (next)
 - Adapt trace subscription from `AsTrace`
 - Stream events to UI via `Channel<TraceEvent>`
 - Trace list with detail pane
 - Event filter chips (Progress / Query / Errors / Lock / Audit)
 - **Done when:** starting a refresh causes live events to stream into the trace view, and failures show full error context in detail pane
 
-### Milestone 5: Power BI Enhanced Refresh path (target: week 5)
+### Milestone 6: Power BI Enhanced Refresh path
 - Detect `powerbi://` connection strings, route to REST API
 - Implement Cancel action (the thing SSMS can't do)
 - Retry/timeout configuration per refresh
 - **Done when:** a running refresh on a Power BI model can be cancelled from the selection tray
 
-### Milestone 6+ (nice to have, not MVP)
+### Milestone 7+ (nice to have, not MVP)
 - Sessions view (via `DISCOVER_SESSIONS`)
 - Memory breakdown view (Vertipaq-style)
 - DAX query window
