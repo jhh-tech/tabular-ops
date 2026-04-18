@@ -6,6 +6,7 @@
     <conv:NullToVisibleConverter    x:Key="NullToVisibleConverter" />
     <conv:ZeroToVisibleConverter    x:Key="ZeroToVisibleConverter" />
     <conv:BoolToVisibleConverter    x:Key="BoolToVisibleConverter" />
+    <conv:BoolToCollapsedConverter  x:Key="BoolToCollapsedConverter" />
     <conv:RatioWidthMultiConverter  x:Key="RatioWidthMultiConverter" />
 
 </ResourceDictionary>

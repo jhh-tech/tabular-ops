@@ -13,6 +13,7 @@ public partial class TenantNodeViewModel : ObservableObject
 
     [ObservableProperty] private TenantConnectionStatus _status = TenantConnectionStatus.Connecting;
     [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private string? _userPrincipalName;
 
     public ObservableCollection<ModelNodeViewModel> Models { get; } = [];
 

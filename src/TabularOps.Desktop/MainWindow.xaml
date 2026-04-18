@@ -157,6 +157,19 @@
                     <ScrollViewer Grid.Row="0"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+
+                        <!-- Entra account header — visible once UPN is resolved -->
+                        <Border Padding="12,8,12,4"
+                                BorderBrush="{StaticResource Border}"
+                                BorderThickness="0,0,0,1"
+                                Visibility="{Binding EntraAccount, Converter={StaticResource NullToCollapsedConverter}}">
+                            <TextBlock Text="{Binding EntraAccount}"
+                                       FontFamily="{StaticResource MonoFont}"
+                                       FontSize="9"
+                                       Foreground="{StaticResource Text3}" />
+                        </Border>
+
                         <ItemsControl ItemsSource="{Binding Tenants}" Margin="0,8">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:TenantNodeViewModel}">
@@ -172,35 +185,53 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Status dot + name -->
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Ellipse Width="6" Height="6" Margin="0,0,6,0"
-                                                             VerticalAlignment="Center">
-                                                        <Ellipse.Style>
-                                                            <Style TargetType="Ellipse">
-                                                                <Setter Property="Fill" Value="{StaticResource Success}" />
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="6" Height="6" Margin="0,0,6,0"
+                                                                 VerticalAlignment="Center">
+                                                            <Ellipse.Style>
+                                                                <Style TargetType="Ellipse">
+                                                                    <Setter Property="Fill" Value="{StaticResource Success}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Status}"
+                                                                                     Value="{x:Static vm:TenantConnectionStatus.Error}">
+                                                                            <Setter Property="Fill" Value="{StaticResource Error}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Status}"
+                                                                                     Value="{x:Static vm:TenantConnectionStatus.ReadOnly}">
+                                                                            <Setter Property="Fill" Value="{StaticResource Warn}" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Status}"
+                                                                                     Value="{x:Static vm:TenantConnectionStatus.Connecting}">
+                                                                            <Setter Property="Fill" Value="{StaticResource Text3}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Ellipse.Style>
+                                                        </Ellipse>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontFamily="{StaticResource SansFont}"
+                                                                   FontSize="11"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource Text2}"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <!-- UPN: which Entra account owns this workspace -->
+                                                    <TextBlock Text="{Binding UserPrincipalName}"
+                                                               FontFamily="{StaticResource MonoFont}"
+                                                               FontSize="9"
+                                                               Foreground="{StaticResource Text3}"
+                                                               Margin="12,1,0,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Status}"
-                                                                                 Value="{x:Static vm:TenantConnectionStatus.Error}">
-                                                                        <Setter Property="Fill" Value="{StaticResource Error}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Status}"
-                                                                                 Value="{x:Static vm:TenantConnectionStatus.ReadOnly}">
-                                                                        <Setter Property="Fill" Value="{StaticResource Warn}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Status}"
-                                                                                 Value="{x:Static vm:TenantConnectionStatus.Connecting}">
-                                                                        <Setter Property="Fill" Value="{StaticResource Text3}" />
+                                                                    <DataTrigger Binding="{Binding UserPrincipalName}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
-                                                        </Ellipse.Style>
-                                                    </Ellipse>
-                                                    <TextBlock Text="{Binding DisplayName}"
-                                                               FontFamily="{StaticResource SansFont}"
-                                                               FontSize="11"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{StaticResource Text2}"
-                                                               VerticalAlignment="Center" />
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
 
                                                 <!-- Remove × button — visible on hover of parent Border -->
@@ -281,6 +312,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </StackPanel>
                     </ScrollViewer>
 
                     <!-- Empty state -->
@@ -360,23 +392,34 @@
                         <StackPanel Orientation="Horizontal">
                             <ToggleButton Content="PARTITIONS"
                                           Style="{StaticResource TabButton}"
-                                          IsChecked="True"
-                                          IsHitTestVisible="False" />
+                                          IsChecked="{Binding IsPartitionsTab, Mode=OneWay}"
+                                          Command="{Binding SwitchTabCommand}"
+                                          CommandParameter="Partitions" />
                             <ToggleButton Content="TRACE"
                                           Style="{StaticResource TabButton}"
                                           IsEnabled="False" />
                             <ToggleButton Content="HISTORY"
                                           Style="{StaticResource TabButton}"
-                                          IsEnabled="False" />
+                                          IsChecked="{Binding IsHistoryTab, Mode=OneWay}"
+                                          Command="{Binding SwitchTabCommand}"
+                                          CommandParameter="History" />
                             <ToggleButton Content="SESSIONS"
                                           Style="{StaticResource TabButton}"
                                           IsEnabled="False" />
                         </StackPanel>
                     </Border>
 
-                    <!-- ── Tab content: Partitions ── -->
-                    <views:PartitionMapView Grid.Row="1"
-                                           DataContext="{Binding PartitionMap}" />
+                    <!-- ── Tab content ── -->
+                    <!-- Each tab is wrapped in a Grid so Visibility binds to MainViewModel
+                         (the parent DataContext), not to the view's own DataContext. -->
+                    <Grid Grid.Row="1">
+                        <Grid Visibility="{Binding IsPartitionsTab, Converter={StaticResource BoolToVisibleConverter}}">
+                            <views:PartitionMapView DataContext="{Binding PartitionMap}" />
+                        </Grid>
+                        <Grid Visibility="{Binding IsHistoryTab, Converter={StaticResource BoolToVisibleConverter}}">
+                            <views:HistoryView DataContext="{Binding History}" />
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>

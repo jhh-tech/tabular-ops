@@ -52,14 +52,66 @@
                                   CommandParameter="{x:Static vm:PartitionFilter.Refreshing}" />
                 </StackPanel>
 
-                <!-- Reload button -->
-                <Button Grid.Column="1"
-                        Content="↺ Reload"
-                        Style="{StaticResource FlatButton}"
-                        Command="{Binding ReloadCommand}"
-                        FontFamily="{StaticResource MonoFont}"
-                        FontSize="11"
-                        VerticalAlignment="Center" />
+                <!-- Right-side actions -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <!-- Selection count + clear -->
+                    <TextBlock FontFamily="{StaticResource MonoFont}"
+                               FontSize="10"
+                               Foreground="{StaticResource Text3}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="{Binding SelectedCount, Mode=OneWay, StringFormat='{}{0} selected'}" />
+                        <Run Text=" · " />
+                        <Hyperlink Command="{Binding ClearSelectionCommand}"
+                                   Foreground="{StaticResource Text3}">clear</Hyperlink>
+                    </TextBlock>
+
+                    <!-- Refresh status text -->
+                    <TextBlock Text="{Binding RefreshStatus}"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="10"
+                               Foreground="{StaticResource Accent}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding RefreshStatus}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Refresh Selected -->
+                    <Button Content="⟳ Refresh selected"
+                            Style="{StaticResource FlatButton}"
+                            Command="{Binding RefreshSelectedCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            Margin="0,0,8,0"
+                            VerticalAlignment="Center" />
+
+                    <!-- Reload -->
+                    <Button Content="↺ Reload"
+                            Style="{StaticResource FlatButton}"
+                            Command="{Binding ReloadCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            VerticalAlignment="Center" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -220,13 +272,19 @@
                                             <DataTemplate DataType="{x:Type vm:PartitionCellViewModel}">
 
                                                 <!-- ── PARTITION CELL ── -->
-                                                <Border Width="108" Height="50"
+                                                <Border Width="108" Height="60"
                                                         Margin="2"
                                                         BorderThickness="1"
                                                         CornerRadius="2"
                                                         ToolTip="{Binding ToolTip}"
                                                         Cursor="Hand"
                                                         ClipToBounds="True">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick"
+                                                                      Command="{Binding DataContext.ToggleSelectionCommand,
+                                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                      CommandParameter="{Binding}" />
+                                                    </Border.InputBindings>
 
                                                     <!-- State-driven border + background -->
                                                     <Border.Style>
@@ -273,6 +331,16 @@
                                                                         </Setter.Value>
                                                                     </Setter>
                                                                 </DataTrigger>
+                                                                <!-- Selected: thicker accent border, slightly brighter bg -->
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                                                                    <Setter Property="BorderThickness" Value="2" />
+                                                                    <Setter Property="Background">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="{StaticResource AccentColor}" Opacity="0.18" />
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
@@ -303,6 +371,12 @@
                                                                        FontFamily="{StaticResource MonoFont}"
                                                                        FontSize="9"
                                                                        Foreground="{StaticResource Text3}" />
+                                                            <TextBlock Text="{Binding DisplayLastRefreshed}"
+                                                                       FontFamily="{StaticResource MonoFont}"
+                                                                       FontSize="8"
+                                                                       Foreground="{StaticResource Text3}"
+                                                                       Opacity="0.7"
+                                                                       Margin="0,1,0,0" />
                                                         </StackPanel>
 
                                                         <!-- Fill bar at bottom -->

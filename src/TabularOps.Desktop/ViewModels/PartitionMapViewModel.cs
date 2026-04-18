@@ -14,29 +14,29 @@ public enum PartitionFilter { All, Stale, Failed, Refreshing }
 // Cell-level view model — one per partition
 // ─────────────────────────────────────────────────────────────────────────────
 
-public sealed class PartitionCellViewModel
+public sealed partial class PartitionCellViewModel : ObservableObject
 {
+    public string TableName { get; }
     public PartitionState State { get; }
     public string PartitionName { get; }
     public string? LastError { get; }
     public DateTimeOffset? LastRefreshed { get; }
-
-    /// <summary>
-    /// Fraction [0.04, 1.0] of this partition's size relative to the largest
-    /// partition in its table. Drives the fill bar at the bottom of the cell.
-    /// </summary>
     public double FillRatio { get; }
-
     public string DisplayRowCount { get; }
     public string DisplaySize { get; }
+    public string DisplayLastRefreshed { get; }
     public string ToolTip { get; }
 
-    public PartitionCellViewModel(PartitionRef partition, long maxTableSizeBytes)
+    [ObservableProperty] private bool _isSelected;
+
+    public PartitionCellViewModel(PartitionRef partition, long maxTableSizeBytes, bool isSelected = false)
     {
+        TableName = partition.TableName;
         State = partition.State;
         PartitionName = partition.PartitionName;
         LastError = partition.LastError;
         LastRefreshed = partition.LastRefreshed;
+        _isSelected = isSelected;
 
         FillRatio = maxTableSizeBytes > 0
             ? Math.Clamp((double)(partition.SizeBytes ?? 0) / maxTableSizeBytes, 0.04, 1.0)
@@ -44,7 +44,9 @@ public sealed class PartitionCellViewModel
 
         DisplayRowCount = partition.RowCount.HasValue ? FormatCount(partition.RowCount.Value) : "—";
         DisplaySize = partition.SizeBytes.HasValue ? FormatBytes(partition.SizeBytes.Value) : "—";
-
+        DisplayLastRefreshed = partition.LastRefreshed.HasValue
+            ? partition.LastRefreshed.Value.LocalDateTime.ToString("MM-dd HH:mm")
+            : "never";
         ToolTip = BuildToolTip(partition);
     }
 
@@ -53,19 +55,17 @@ public sealed class PartitionCellViewModel
         var parts = new List<string>
         {
             p.PartitionName,
-            $"State:  {p.State}",
-            $"Rows:   {(p.RowCount.HasValue ? FormatCount(p.RowCount.Value) : "—")}",
-            $"Size:   {(p.SizeBytes.HasValue ? FormatBytes(p.SizeBytes.Value) : "—")}",
+            $"State:     {p.State}",
+            $"Rows:      {(p.RowCount.HasValue ? FormatCount(p.RowCount.Value) : "—")}",
+            $"Size:      {(p.SizeBytes.HasValue ? FormatBytes(p.SizeBytes.Value) : "—")}",
             $"Refreshed: {(p.LastRefreshed.HasValue ? p.LastRefreshed.Value.LocalDateTime.ToString("yyyy-MM-dd HH:mm") : "Never")}",
         };
-
         if (!string.IsNullOrEmpty(p.LastError))
             parts.Add($"\nError:\n{p.LastError}");
-
         return string.Join(Environment.NewLine, parts);
     }
 
-    private static string FormatCount(long n) => n switch
+    internal static string FormatCount(long n) => n switch
     {
         >= 1_000_000_000 => $"{n / 1_000_000_000.0:F1}B",
         >= 1_000_000     => $"{n / 1_000_000.0:F1}M",
@@ -73,7 +73,7 @@ public sealed class PartitionCellViewModel
         _                => n.ToString()
     };
 
-    private static string FormatBytes(long b) => b switch
+    internal static string FormatBytes(long b) => b switch
     {
         0                => "—",
         >= 1_073_741_824 => $"{b / 1_073_741_824.0:F1} GB",
@@ -94,10 +94,9 @@ public sealed class TableViewModel
     public string DisplayRowCount { get; }
     public string DisplaySize { get; }
     public IReadOnlyList<PartitionCellViewModel> Partitions { get; }
-
     internal TableSnapshot Snapshot { get; }
 
-    public TableViewModel(TableSnapshot snapshot)
+    public TableViewModel(TableSnapshot snapshot, HashSet<(string, string)> selectedKeys)
     {
         Snapshot = snapshot;
         TableName = snapshot.TableName;
@@ -107,7 +106,9 @@ public sealed class TableViewModel
 
         var maxSize = snapshot.MaxPartitionSizeBytes;
         Partitions = snapshot.Partitions
-            .Select(p => new PartitionCellViewModel(p, maxSize))
+            .Select(p => new PartitionCellViewModel(
+                p, maxSize,
+                isSelected: selectedKeys.Contains((p.TableName, p.PartitionName))))
             .ToList();
     }
 
@@ -137,25 +138,37 @@ public sealed class TableViewModel
 public partial class PartitionMapViewModel : ObservableObject
 {
     private readonly ConnectionManager _connectionManager;
+    private readonly TomRefreshEngine _refreshEngine;
     private ModelRef? _currentModel;
     private IReadOnlyList<TableSnapshot> _snapshots = [];
+
+    // Persisted selection — survives ApplyFilter() rebuilds
+    private readonly HashSet<(string Table, string Partition)> _selectedKeys = [];
 
     [ObservableProperty] private ObservableCollection<TableViewModel> _visibleTables = [];
     [ObservableProperty] private PartitionFilter _activeFilter = PartitionFilter.All;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private string? _modelLabel;
+    [ObservableProperty] private string? _refreshStatus;
 
-    // Filter-chip IsChecked bindings
     public bool IsFilterAll        => ActiveFilter == PartitionFilter.All;
     public bool IsFilterStale      => ActiveFilter == PartitionFilter.Stale;
     public bool IsFilterFailed     => ActiveFilter == PartitionFilter.Failed;
     public bool IsFilterRefreshing => ActiveFilter == PartitionFilter.Refreshing;
 
-    public PartitionMapViewModel(ConnectionManager connectionManager)
+    public int SelectedCount => _selectedKeys.Count;
+
+    public PartitionMapViewModel(ConnectionManager connectionManager, TomRefreshEngine refreshEngine)
     {
         _connectionManager = connectionManager;
+        _refreshEngine = refreshEngine;
     }
+
+    // -------------------------------------------------------------------------
+    // Loading
+    // -------------------------------------------------------------------------
 
     public async Task LoadAsync(ModelRef model, CancellationToken ct = default)
     {
@@ -167,14 +180,13 @@ public partial class PartitionMapViewModel : ObservableObject
 
         try
         {
-            // Phase 1 — TOM structure: partition names + states appear immediately.
-            // The catalog-scoped TOM server is cached so Reload is fast after the first load.
+            // Phase 1: TOM structure → show tiles immediately
             _snapshots = await PartitionService.GetTableStructureAsync(
                 _connectionManager, model.TenantId, model.DatabaseName, ct);
             ApplyFilter();
             IsLoading = false;
 
-            // Phase 2 — DMV stats: row counts and sizes fill in without blocking the tiles.
+            // Phase 2: DMV stats → fill in row counts and sizes
             try
             {
                 var storage = await DmvQueries.GetPartitionStorageAsync(
@@ -182,7 +194,7 @@ public partial class PartitionMapViewModel : ObservableObject
                 _snapshots = PartitionService.EnrichWithStorage(_snapshots, storage);
                 ApplyFilter();
             }
-            catch { /* stats unavailable — tiles remain without stats, that's acceptable */ }
+            catch { /* stats unavailable — tiles remain without stats */ }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -192,11 +204,93 @@ public partial class PartitionMapViewModel : ObservableObject
             while (inner is not null) { msg += "\n→ " + inner.Message; inner = inner.InnerException; }
             ErrorMessage = msg;
         }
+        finally { IsLoading = false; }
+    }
+
+    // -------------------------------------------------------------------------
+    // Selection
+    // -------------------------------------------------------------------------
+
+    [RelayCommand]
+    private void ToggleSelection(PartitionCellViewModel? cell)
+    {
+        if (cell is null) return;
+        var key = (cell.TableName, cell.PartitionName);
+        if (_selectedKeys.Contains(key))
+        {
+            _selectedKeys.Remove(key);
+            cell.IsSelected = false;
+        }
+        else
+        {
+            _selectedKeys.Add(key);
+            cell.IsSelected = true;
+        }
+        OnPropertyChanged(nameof(SelectedCount));
+        RefreshSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand]
+    private void ClearSelection()
+    {
+        _selectedKeys.Clear();
+        foreach (var tvm in VisibleTables)
+            foreach (var cell in tvm.Partitions)
+                cell.IsSelected = false;
+        OnPropertyChanged(nameof(SelectedCount));
+        RefreshSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    // -------------------------------------------------------------------------
+    // Refresh
+    // -------------------------------------------------------------------------
+
+    [RelayCommand(CanExecute = nameof(CanRefreshSelected))]
+    private async Task RefreshSelected(CancellationToken ct)
+    {
+        if (_currentModel is null || _selectedKeys.Count == 0) return;
+
+        IsRefreshing = true;
+        RefreshStatus = $"Refreshing {_selectedKeys.Count} partition(s)…";
+
+        var partitions = _selectedKeys.ToList();
+        try
+        {
+            await _refreshEngine.RefreshAsync(
+                _currentModel.TenantId,
+                _currentModel.DatabaseName,
+                partitions,
+                progress: null,
+                ct);
+
+            RefreshStatus = $"Refresh completed — {partitions.Count} partition(s)";
+        }
+        catch (OperationCanceledException)
+        {
+            RefreshStatus = "Refresh cancelled";
+        }
+        catch (Exception ex)
+        {
+            RefreshStatus = $"Refresh failed: {ex.Message}";
+        }
         finally
         {
-            IsLoading = false;
+            IsRefreshing = false;
         }
+
+        // Reload partition data to reflect new state
+        if (_currentModel is not null)
+            await LoadAsync(_currentModel, ct);
     }
+
+    private bool CanRefreshSelected() => _selectedKeys.Count > 0 && !IsRefreshing && !IsLoading;
+
+    partial void OnIsRefreshingChanged(bool value) => RefreshSelectedCommand.NotifyCanExecuteChanged();
+    partial void OnIsLoadingChanged(bool value)    => RefreshSelectedCommand.NotifyCanExecuteChanged();
+
+    // -------------------------------------------------------------------------
+    // Filter
+    // -------------------------------------------------------------------------
 
     [RelayCommand]
     private void SetFilter(PartitionFilter filter)
@@ -233,24 +327,22 @@ public partial class PartitionMapViewModel : ObservableObject
                 PartitionFilter.Refreshing => PartitionState.Refreshing,
                 _                          => throw new InvalidOperationException()
             };
-
             source = _snapshots
                 .Select(s =>
                 {
                     var filtered = s.Partitions.Where(p => p.State == matchState).ToList();
                     return s with
                     {
-                        Partitions     = filtered,
-                        PartitionCount = filtered.Count,
-                        TotalRowCount  = filtered.Sum(p => p.RowCount ?? 0),
-                        TotalSizeBytes = filtered.Sum(p => p.SizeBytes ?? 0),
-                        // MaxPartitionSizeBytes kept from original — fill bars stay proportional
+                        Partitions            = filtered,
+                        PartitionCount        = filtered.Count,
+                        TotalRowCount         = filtered.Sum(p => p.RowCount ?? 0),
+                        TotalSizeBytes        = filtered.Sum(p => p.SizeBytes ?? 0),
                     };
                 })
                 .Where(s => s.Partitions.Any());
         }
 
         VisibleTables = new ObservableCollection<TableViewModel>(
-            source.Select(s => new TableViewModel(s)));
+            source.Select(s => new TableViewModel(s, _selectedKeys)));
     }
 }

@@ -15,16 +15,44 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<TenantNodeViewModel> Tenants { get; } = [];
     public StatusBarViewModel StatusBar { get; } = new();
     public PartitionMapViewModel PartitionMap { get; }
+    public HistoryViewModel History { get; }
 
     [ObservableProperty] private TenantNodeViewModel? _activeTenant;
     [ObservableProperty] private ModelNodeViewModel? _activeModel;
     [ObservableProperty] private bool _isRestoring;
+    [ObservableProperty] private string _activeTab = "Partitions";
+
+    public bool IsPartitionsTab => ActiveTab == "Partitions";
+    public bool IsHistoryTab    => ActiveTab == "History";
+
+    /// <summary>
+    /// UPN of the connected Entra account (e.g. user@contoso.com).
+    /// Derived from the first workspace that has a resolved UPN.
+    /// </summary>
+    public string? EntraAccount => Tenants
+        .Select(t => t.UserPrincipalName)
+        .FirstOrDefault(u => u is not null);
 
     public MainViewModel(ConnectionManager connectionManager, ConnectionStore connectionStore)
     {
         _connectionManager = connectionManager;
         _connectionStore = connectionStore;
-        PartitionMap = new PartitionMapViewModel(connectionManager);
+        PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine);
+        History = new HistoryViewModel(App.RefreshHistory, connectionManager);
+    }
+
+    [RelayCommand]
+    private async Task SwitchTab(string tab)
+    {
+        ActiveTab = tab;
+        OnPropertyChanged(nameof(IsPartitionsTab));
+        OnPropertyChanged(nameof(IsHistoryTab));
+
+        if (tab == "History")
+        {
+            UpdateHistoryContext();
+            await History.RefreshAsync();
+        }
     }
 
     partial void OnActiveTenantChanged(TenantNodeViewModel? value)
@@ -36,6 +64,35 @@ public partial class MainViewModel : ObservableObject
     {
         if (ActiveTenant is null || value is null) return;
         ActiveTenant.Context.ActiveModel = value.Model;
+
+        if (ActiveTab == "History")
+        {
+            UpdateHistoryContext();
+            _ = History.RefreshAsync();
+        }
+    }
+
+    /// <summary>
+    /// Passes the right filter context to HistoryViewModel:
+    /// workspace-level when no model is selected, model-level otherwise.
+    /// </summary>
+    private void UpdateHistoryContext()
+    {
+        if (ActiveModel is not null)
+        {
+            History.SetContext(
+                ActiveModel.Model.TenantId,
+                ActiveModel.Model.WorkspaceName,
+                ActiveModel.Model.DatabaseId,
+                ActiveModel.Model.DatabaseName,
+                ActiveModel.Model.EndpointType);
+        }
+        else
+        {
+            History.SetContext(
+                ActiveTenant?.TenantId,
+                ActiveTenant?.Context.DisplayName);
+        }
     }
 
     /// <summary>
@@ -83,6 +140,17 @@ public partial class MainViewModel : ObservableObject
                 : await _connectionManager.AddSsasTenantAsync(
                     saved.ConnectionString, saved.DisplayName, ct);
 
+            // Propagate UPN so the sidebar can show which Entra account owns this workspace
+            if (registered.UserPrincipalName is not null)
+            {
+                var node = Tenants.FirstOrDefault(t => t.TenantId == registered.TenantId);
+                if (node is not null)
+                {
+                    node.UserPrincipalName = registered.UserPrincipalName;
+                    OnPropertyChanged(nameof(EntraAccount));
+                }
+            }
+
             await LoadModelsAsync(registered, ct);
         }
         catch (Exception ex)
@@ -101,6 +169,17 @@ public partial class MainViewModel : ObservableObject
             foreach (var context in dialog.ResultContexts)
             {
                 RegisterTenant(context);
+
+                if (context.UserPrincipalName is not null)
+                {
+                    var node = Tenants.FirstOrDefault(t => t.TenantId == context.TenantId);
+                    if (node is not null)
+                    {
+                        node.UserPrincipalName = context.UserPrincipalName;
+                        OnPropertyChanged(nameof(EntraAccount));
+                    }
+                }
+
                 _ = LoadModelsAsync(context);
             }
 

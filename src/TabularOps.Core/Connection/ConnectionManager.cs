@@ -55,6 +55,17 @@ public sealed class ConnectionManager : IAsyncDisposable
         _tenants.Values.Select(s => s.Context).ToList();
 
     /// <summary>
+    /// Creates a PowerBIClient authenticated with the Power BI MSAL token.
+    /// Caller owns the lifetime and must dispose it.
+    /// </summary>
+    public async Task<PowerBIClient> CreatePowerBiClientAsync(CancellationToken ct = default)
+    {
+        var app = await GetOrCreatePowerBiAppAsync(ct);
+        var token = await AcquireTokenAsync(app, ct);
+        return new PowerBIClient(new TokenCredentials(token.AccessToken, "Bearer"));
+    }
+
+    /// <summary>
     /// Authenticates interactively (once) and returns all Power BI workspaces
     /// the user has access to. Subsequent calls return silently from token cache.
     /// </summary>
@@ -96,6 +107,12 @@ public sealed class ConnectionManager : IAsyncDisposable
         };
 
         await RegisterTenantAsync(context, app, ct);
+
+        // Populate UPN from the cached MSAL account so the sidebar can show which
+        // Entra account this workspace belongs to.
+        var accounts = await app.GetAccountsAsync();
+        context.UserPrincipalName = accounts.FirstOrDefault()?.Username;
+
         return context;
     }
 

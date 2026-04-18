@@ -35,6 +35,12 @@ public sealed class TenantContext
     /// <summary>The model the user has currently selected in the sidebar.</summary>
     public ModelRef? ActiveModel { get; set; }
 
+    /// <summary>
+    /// UPN of the authenticated Entra account (e.g. user@contoso.com).
+    /// Populated after a successful MSAL token acquisition. Null for SSAS/Windows auth.
+    /// </summary>
+    public string? UserPrincipalName { get; set; }
+
     /// <summary>Unique key used for per-tenant SQLite DB file naming and MSAL cache keying.</summary>
     public string TenantId => EndpointType == EndpointType.PowerBi
         ? DeriveWorkspaceId(ConnectionString)
