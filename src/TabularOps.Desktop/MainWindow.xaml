@@ -423,8 +423,17 @@
                             Padding="16,0"
                             Height="32">
                         <Grid>
-                            <!-- Left: workspace + model details -->
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Breadcrumb: workspace / workspace / model -->
+                            <TextBlock Text="{Binding ContextBreadcrumb}"
+                                       FontFamily="{StaticResource MonoFont}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Text2}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,0,0" />
+
+                            <!-- Old content (to be removed): workspace + model details -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
 
                                 <!-- Workspace name -->
                                 <TextBlock Text="{Binding ActiveModel.Model.WorkspaceName}"
@@ -524,22 +533,71 @@
                             BorderBrush="{DynamicResource Border}"
                             BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal">
-                            <ToggleButton Content="PARTITIONS"
-                                          Style="{StaticResource TabButton}"
+                            <!-- Partitions tab with count badge -->
+                            <ToggleButton Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsPartitionsTab, Mode=OneWay}"
                                           Command="{Binding SwitchTabCommand}"
-                                          CommandParameter="Partitions" />
-                            <ToggleButton Content="TRACE"
-                                          Style="{StaticResource TabButton}"
+                                          CommandParameter="Partitions">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Partitions " />
+                                    <Border Background="{DynamicResource Accent}"
+                                            CornerRadius="10"
+                                            Padding="5,1"
+                                            Margin="2,0,0,0">
+                                        <TextBlock Text="{Binding PartitionCount}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource Bg0}"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </StackPanel>
+                            </ToggleButton>
+
+                            <!-- Live Trace tab with status badge -->
+                            <ToggleButton Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsTraceTab, Mode=OneWay}"
                                           Command="{Binding SwitchTabCommand}"
-                                          CommandParameter="Trace" />
-                            <ToggleButton Content="HISTORY"
-                                          Style="{StaticResource TabButton}"
+                                          CommandParameter="Trace">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Live Trace " />
+                                    <Border Background="{DynamicResource Warn}"
+                                            CornerRadius="3"
+                                            Padding="5,1"
+                                            Margin="2,0,0,0"
+                                            Visibility="{Binding IsTraceRunning, Converter={StaticResource BoolToVisibleConverter}}">
+                                        <TextBlock Text="REC"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource Bg0}"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </StackPanel>
+                            </ToggleButton>
+
+                            <!-- History tab with count badge -->
+                            <ToggleButton Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsHistoryTab, Mode=OneWay}"
                                           Command="{Binding SwitchTabCommand}"
-                                          CommandParameter="History" />
-                            <ToggleButton Content="SESSIONS"
+                                          CommandParameter="History">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="History " />
+                                    <Border Background="{DynamicResource Text3}"
+                                            CornerRadius="10"
+                                            Padding="5,1"
+                                            Margin="2,0,0,0">
+                                        <TextBlock Text="{Binding HistoryCount}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource Bg1}"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </StackPanel>
+                            </ToggleButton>
+
+                            <!-- Sessions tab (placeholder) -->
+                            <ToggleButton Content="Sessions"
+                                          Style="{StaticResource TabButton}"
+                                          IsEnabled="False" />
+
+                            <!-- DAX Query tab (placeholder) -->
+                            <ToggleButton Content="DAX Query"
                                           Style="{StaticResource TabButton}"
                                           IsEnabled="False" />
                         </StackPanel>

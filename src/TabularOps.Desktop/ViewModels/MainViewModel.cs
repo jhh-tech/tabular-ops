@@ -39,6 +39,16 @@ public partial class MainViewModel : ObservableObject
 
     public int TotalModelCount => Tenants.Sum(t => t.Models.Count);
 
+    public string ContextBreadcrumb => ActiveModel is null
+        ? ActiveTenant?.DisplayName ?? ""
+        : $"{ActiveTenant?.DisplayName} / {ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}";
+
+    public int PartitionCount => PartitionMap.VisibleTables.Sum(t => t.Partitions.Count);
+
+    public int HistoryCount => History.Runs.Count;
+
+    public bool IsTraceRunning => Trace.IsRunning;
+
     // ── Active model context bar ──────────────────────────────────────────────
 
     public bool HasActiveModel => ActiveModel is not null;
