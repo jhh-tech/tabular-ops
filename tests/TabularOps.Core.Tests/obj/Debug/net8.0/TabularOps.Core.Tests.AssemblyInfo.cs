@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TabularOps.Core.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+914c98187351d21dd745c06f90a645b53c210098")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fa8da7c55b47fb5eca63e3921a30fc8e231bb3f7")]
 [assembly: System.Reflection.AssemblyProductAttribute("TabularOps.Core.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TabularOps.Core.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

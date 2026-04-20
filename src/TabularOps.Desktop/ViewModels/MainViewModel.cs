@@ -41,7 +41,9 @@ public partial class MainViewModel : ObservableObject
 
     public string ContextBreadcrumb => ActiveModel is null
         ? ActiveTenant?.DisplayName ?? ""
-        : $"{ActiveTenant?.DisplayName} / {ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}";
+        : ActiveTenant?.DisplayName == ActiveModel.WorkspaceName
+            ? $"{ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}"
+            : $"{ActiveTenant?.DisplayName} / {ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}";
 
     public int PartitionCount => PartitionMap.VisibleTables.Sum(t => t.Partitions.Count);
 
