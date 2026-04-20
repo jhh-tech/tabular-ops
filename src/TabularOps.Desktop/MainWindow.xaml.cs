@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using TabularOps.Desktop.ViewModels;
 
 namespace TabularOps.Desktop;
@@ -22,4 +23,10 @@ public partial class MainWindow : Window
 
     private void UpdateThemeButton() =>
         ThemeToggleButton.Content = ThemeManager.IsDark ? "☀" : "☾";
+
+    private void OnWorkspaceHeaderClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement el && el.DataContext is TenantNodeViewModel vm)
+            vm.IsExpanded = !vm.IsExpanded;
+    }
 }

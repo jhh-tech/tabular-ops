@@ -346,6 +346,7 @@ C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\Ta
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularOps.Core.Tests.AssemblyInfoInputs.cache
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularOps.Core.Tests.AssemblyInfo.cs
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularOps.Core.Tests.csproj.CoreCompileInputs.cache
+C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularOps.Core.Tests.sourcelink.json
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularO.43772895.Up2Date
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\TabularOps.Core.Tests.dll
 C:\Users\johan\Repos\tabular-ops\tests\TabularOps.Core.Tests\obj\Debug\net8.0\refint\TabularOps.Core.Tests.dll

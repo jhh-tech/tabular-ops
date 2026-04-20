@@ -14,6 +14,7 @@ public partial class TenantNodeViewModel : ObservableObject
     [ObservableProperty] private TenantConnectionStatus _status = TenantConnectionStatus.Connecting;
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private string? _userPrincipalName;
+    [ObservableProperty] private bool _isExpanded = true;
 
     public ObservableCollection<ModelNodeViewModel> Models { get; } = [];
 

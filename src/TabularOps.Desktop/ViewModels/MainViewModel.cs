@@ -16,6 +16,7 @@ public partial class MainViewModel : ObservableObject
     public StatusBarViewModel StatusBar { get; } = new();
     public PartitionMapViewModel PartitionMap { get; }
     public HistoryViewModel History { get; }
+    public TraceViewModel Trace { get; }
 
     [ObservableProperty] private TenantNodeViewModel? _activeTenant;
     [ObservableProperty] private ModelNodeViewModel? _activeModel;
@@ -24,6 +25,7 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsPartitionsTab => ActiveTab == "Partitions";
     public bool IsHistoryTab    => ActiveTab == "History";
+    public bool IsTraceTab      => ActiveTab == "Trace";
 
     /// <summary>
     /// UPN of the connected Entra account (e.g. user@contoso.com).
@@ -34,6 +36,8 @@ public partial class MainViewModel : ObservableObject
         .FirstOrDefault(u => u is not null);
 
     public bool HasPowerBiTenants => Tenants.Any(t => t.Context.EndpointType == EndpointType.PowerBi);
+
+    public int TotalModelCount => Tenants.Sum(t => t.Models.Count);
 
     // ── Active model context bar ──────────────────────────────────────────────
 
@@ -84,6 +88,7 @@ public partial class MainViewModel : ObservableObject
         _connectionStore = connectionStore;
         PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine, App.PartitionCache);
         History = new HistoryViewModel(App.RefreshHistory, connectionManager);
+        Trace = new TraceViewModel(connectionManager);
     }
 
     [RelayCommand]
@@ -92,11 +97,26 @@ public partial class MainViewModel : ObservableObject
         ActiveTab = tab;
         OnPropertyChanged(nameof(IsPartitionsTab));
         OnPropertyChanged(nameof(IsHistoryTab));
+        OnPropertyChanged(nameof(IsTraceTab));
 
         if (tab == "History")
         {
             UpdateHistoryContext();
             await History.RefreshAsync();
+        }
+        else if (tab == "Trace")
+        {
+            if (ActiveModel is not null)
+                Trace.SetContext(ActiveModel.Model.TenantId, ActiveModel.Model.DatabaseName);
+            else if (ActiveTenant is not null)
+                Trace.SetContext(ActiveTenant.TenantId, null);
+
+            if (!Trace.IsRunning)
+                await Trace.StartTraceAsync();
+        }
+        else if (Trace.IsRunning)
+        {
+            await Trace.StopTraceAsync();
         }
     }
 
