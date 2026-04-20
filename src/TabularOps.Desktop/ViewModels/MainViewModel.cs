@@ -33,6 +33,8 @@ public partial class MainViewModel : ObservableObject
         .Select(t => t.UserPrincipalName)
         .FirstOrDefault(u => u is not null);
 
+    public bool HasPowerBiTenants => Tenants.Any(t => t.Context.EndpointType == EndpointType.PowerBi);
+
     // ── Active model context bar ──────────────────────────────────────────────
 
     public bool HasActiveModel => ActiveModel is not null;
@@ -72,6 +74,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ActiveCapacitySku));
         OnPropertyChanged(nameof(ActiveCapacityRegion));
         OnPropertyChanged(nameof(HasCapacityInfo));
+        OnPropertyChanged(nameof(EntraAccount));
+        OnPropertyChanged(nameof(HasPowerBiTenants));
     }
 
     public MainViewModel(ConnectionManager connectionManager, ConnectionStore connectionStore)
@@ -307,6 +311,33 @@ public partial class MainViewModel : ObservableObject
 
         await _connectionManager.RemoveTenantAsync(tenant.TenantId);
         await SaveConnectionsAsync();
+    }
+
+    [RelayCommand]
+    private async Task SignOutPowerBi()
+    {
+        var pbiTenants = Tenants
+            .Where(t => t.Context.EndpointType == EndpointType.PowerBi)
+            .ToList();
+
+        foreach (var tenant in pbiTenants)
+        {
+            Tenants.Remove(tenant);
+            if (ActiveTenant == tenant)
+            {
+                ActiveTenant = Tenants.FirstOrDefault();
+                ActiveModel = null;
+            }
+            else if (ActiveModel is not null && tenant.Models.Contains(ActiveModel))
+            {
+                ActiveModel = null;
+            }
+            await _connectionManager.RemoveTenantAsync(tenant.TenantId);
+        }
+
+        await _connectionManager.SignOutPowerBiAsync();
+        await SaveConnectionsAsync();
+        RaiseActiveContextChanged();
     }
 
     public void RegisterTenant(TenantContext context)

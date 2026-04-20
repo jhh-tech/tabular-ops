@@ -179,6 +179,7 @@ public partial class PartitionMapViewModel : ObservableObject
     [ObservableProperty] private string? _modelLabel;
     [ObservableProperty] private string? _refreshStatus;
     [ObservableProperty] private RefreshTypeOption _selectedRefreshType = RefreshTypeOptions[0];
+    [ObservableProperty] private string? _totalModelSize;
 
 
     public bool IsFilterAll        => ActiveFilter == PartitionFilter.All;
@@ -441,5 +442,8 @@ public partial class PartitionMapViewModel : ObservableObject
 
         VisibleTables = new ObservableCollection<TableViewModel>(
             source.Select(s => new TableViewModel(s, _selectedKeys)));
+
+        var totalBytes = _snapshots.Sum(s => s.TotalSizeBytes);
+        TotalModelSize = totalBytes > 0 ? PartitionCellViewModel.FormatBytes(totalBytes) : null;
     }
 }

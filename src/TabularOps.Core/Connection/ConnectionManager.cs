@@ -91,8 +91,6 @@ public sealed class ConnectionManager : IAsyncDisposable
 
         var groups = await pbiClient.Groups.GetGroupsAsync(cancellationToken: ct);
         return groups.Value
-            // Only workspaces on dedicated capacity support XMLA read-write
-            .Where(g => g.IsOnDedicatedCapacity == true)
             .OrderBy(g => g.Name)
             .Select(g =>
             {
@@ -414,6 +412,29 @@ public sealed class ConnectionManager : IAsyncDisposable
 
         var token = await AcquireTokenAsync(state.MsalApp, ct);
         return $"Data Source={state.Context.ConnectionString};Password={token.AccessToken}";
+    }
+
+    /// <summary>
+    /// Returns the UPN of the currently cached Power BI account, or null if none.
+    /// </summary>
+    public async Task<string?> GetPowerBiAccountUsernameAsync()
+    {
+        if (_powerBiMsalApp is null) return null;
+        var accounts = await _powerBiMsalApp.GetAccountsAsync();
+        return accounts.FirstOrDefault()?.Username;
+    }
+
+    /// <summary>
+    /// Signs out of the shared Power BI MSAL account and clears the token cache.
+    /// Call RemoveTenantAsync for each Power BI tenant before or after this.
+    /// </summary>
+    public async Task SignOutPowerBiAsync()
+    {
+        if (_powerBiMsalApp is null) return;
+        var accounts = await _powerBiMsalApp.GetAccountsAsync();
+        foreach (var account in accounts)
+            await _powerBiMsalApp.RemoveAsync(account);
+        _powerBiMsalApp = null;
     }
 
     /// <summary>

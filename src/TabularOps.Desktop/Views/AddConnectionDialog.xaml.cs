@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using TabularOps.Core.Connection;
 using TabularOps.Core.Model;
@@ -53,6 +54,9 @@ public partial class AddConnectionDialog : Window
             var workspaces = await App.ConnectionManager.GetWorkspacesAsync();
             _allWorkspaces = [.. workspaces];
             PopulateList(_allWorkspaces);
+
+            var upn = await App.ConnectionManager.GetPowerBiAccountUsernameAsync();
+            TxtSignedInAs.Text = upn is not null ? $"({upn})" : string.Empty;
 
             StepSignIn.Visibility = Visibility.Collapsed;
             StepWorkspacePicker.Visibility = Visibility.Visible;
@@ -183,6 +187,59 @@ public partial class AddConnectionDialog : Window
         {
             IsEnabled = true;
         }
+    }
+
+    private async void OnDialogSignOut(object sender, RoutedEventArgs e)
+    {
+        BtnSignOut.IsEnabled = false;
+        await App.ConnectionManager.SignOutPowerBiAsync();
+
+        // Reset back to Sign In step
+        _allWorkspaces.Clear();
+        _checkedNames.Clear();
+        WorkspaceList.Children.Clear();
+        TxtSearch.Clear();
+        TxtManualWorkspace.Clear();
+        TxtSignedInAs.Text = string.Empty;
+        UpdateConnectButton();
+
+        StepWorkspacePicker.Visibility = Visibility.Collapsed;
+        BtnConnect.Visibility = Visibility.Collapsed;
+        StepSignIn.Visibility = Visibility.Visible;
+        BtnSignIn.IsEnabled = true;
+        BtnSignIn.Content = "Sign In";
+        BtnSignOut.IsEnabled = true;
+    }
+
+    private void OnManualWorkspaceKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) AddManualWorkspace();
+    }
+
+    private void OnAddManualWorkspace(object sender, RoutedEventArgs e) => AddManualWorkspace();
+
+    private void AddManualWorkspace()
+    {
+        var name = TxtManualWorkspace.Text.Trim();
+        if (string.IsNullOrEmpty(name)) return;
+
+        // Add to the master list if not already present
+        if (!_allWorkspaces.Any(w => w.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            _allWorkspaces.Add(new WorkspaceInfo(
+                Id: name, Name: name,
+                CapacityId: null, CapacityName: null, CapacityRegion: null, CapacitySku: null));
+        }
+
+        _checkedNames.Add(name);
+        TxtManualWorkspace.Clear();
+
+        // Re-apply any active search filter so the new entry shows
+        var query = TxtSearch.Text.Trim();
+        var filtered = string.IsNullOrEmpty(query)
+            ? _allWorkspaces
+            : _allWorkspaces.Where(w => w.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        PopulateList(filtered);
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;

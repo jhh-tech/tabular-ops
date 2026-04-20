@@ -172,14 +172,36 @@
                         <StackPanel>
 
                         <!-- Entra account header — visible once UPN is resolved -->
-                        <Border Padding="12,8,12,4"
+                        <Border x:Name="EntraHeader"
+                                Padding="12,8,4,4"
                                 BorderBrush="{DynamicResource Border}"
                                 BorderThickness="0,0,0,1"
                                 Visibility="{Binding EntraAccount, Converter={StaticResource NullToCollapsedConverter}}">
-                            <TextBlock Text="{Binding EntraAccount}"
-                                       FontFamily="{StaticResource MonoFont}"
-                                       FontSize="9"
-                                       Foreground="{DynamicResource Text3}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding EntraAccount}"
+                                           FontFamily="{StaticResource MonoFont}"
+                                           FontSize="9"
+                                           Foreground="{DynamicResource Text3}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1"
+                                        Content="Sign out"
+                                        ToolTip="Sign out of Microsoft account and remove all Power BI workspaces"
+                                        Style="{StaticResource FlatButton}"
+                                        FontSize="9"
+                                        Foreground="{DynamicResource Text3}"
+                                        BorderThickness="0"
+                                        Padding="5,2"
+                                        Command="{Binding SignOutPowerBiCommand}"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding IsMouseOver,
+                                                     RelativeSource={RelativeSource AncestorType=Border},
+                                                     Converter={StaticResource BoolToVisibleConverter}}" />
+                            </Grid>
                         </Border>
 
                         <ItemsControl ItemsSource="{Binding Tenants}" Margin="0,8">
@@ -445,6 +467,19 @@
                                     <Run Text="{Binding ActiveWorkspaceModelCount, Mode=OneWay}" />
                                     <Run Text=" models" />
                                 </TextBlock>
+
+                                <!-- Total model size — only shown once DMV stats are loaded -->
+                                <StackPanel Orientation="Horizontal"
+                                            Visibility="{Binding PartitionMap.TotalModelSize, Converter={StaticResource NullToCollapsedConverter}}">
+                                    <TextBlock Text=" · "
+                                               FontFamily="{StaticResource MonoFont}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource Text3}" />
+                                    <TextBlock Text="{Binding PartitionMap.TotalModelSize}"
+                                               FontFamily="{StaticResource MonoFont}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource Text2}" />
+                                </StackPanel>
 
                                 <!-- Capacity info — only shown for Power BI workspaces with known capacity -->
                                 <StackPanel Orientation="Horizontal"
