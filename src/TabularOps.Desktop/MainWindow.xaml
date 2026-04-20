@@ -171,8 +171,40 @@
                                   HorizontalScrollBarVisibility="Disabled">
                         <StackPanel>
 
+                            <!-- Entra account + sign-out — visible once UPN is resolved -->
+                            <Border Padding="12,6,4,6"
+                                    BorderBrush="{DynamicResource Border}"
+                                    BorderThickness="0,0,0,1"
+                                    Visibility="{Binding EntraAccount, Converter={StaticResource NullToCollapsedConverter}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding EntraAccount}"
+                                               FontFamily="{StaticResource MonoFont}"
+                                               FontSize="9"
+                                               Foreground="{DynamicResource Text3}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <Button Grid.Column="1"
+                                            Content="Sign out"
+                                            ToolTip="Sign out of Microsoft account"
+                                            Style="{StaticResource FlatButton}"
+                                            FontSize="9"
+                                            Foreground="{DynamicResource Text3}"
+                                            BorderThickness="0"
+                                            Padding="5,2"
+                                            Command="{Binding SignOutPowerBiCommand}"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding IsMouseOver,
+                                                         RelativeSource={RelativeSource AncestorType=Border},
+                                                         Converter={StaticResource BoolToVisibleConverter}}" />
+                                </Grid>
+                            </Border>
+
                             <!-- Models header with total count -->
-                            <Border Padding="12,8,12,6"
+                            <Border Padding="12,6,12,6"
                                     BorderBrush="{DynamicResource Border}"
                                     BorderThickness="0,0,0,1">
                                 <Grid>
@@ -423,20 +455,11 @@
                             Padding="16,0"
                             Height="32">
                         <Grid>
-                            <!-- Breadcrumb: workspace / workspace / model -->
-                            <TextBlock Text="{Binding ContextBreadcrumb}"
-                                       FontFamily="{StaticResource MonoFont}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource Text2}"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
-                                       Margin="0,0,0,0" />
+                            <!-- Workspace details row: breadcrumb + endpoint + CL + models + size + capacity -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                            <!-- Old content (to be removed): workspace + model details -->
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
-
-                                <!-- Workspace name -->
-                                <TextBlock Text="{Binding ActiveModel.Model.WorkspaceName}"
+                                <!-- Breadcrumb replaces workspace name -->
+                                <TextBlock Text="{Binding ContextBreadcrumb}"
                                            FontFamily="{StaticResource MonoFont}"
                                            FontSize="11"
                                            FontWeight="SemiBold"

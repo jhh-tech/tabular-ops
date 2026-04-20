@@ -89,6 +89,11 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ActiveCapacityRegion));
         OnPropertyChanged(nameof(HasCapacityInfo));
         OnPropertyChanged(nameof(EntraAccount));
+        OnPropertyChanged(nameof(ContextBreadcrumb));
+        OnPropertyChanged(nameof(PartitionCount));
+        OnPropertyChanged(nameof(HistoryCount));
+        OnPropertyChanged(nameof(IsTraceRunning));
+        OnPropertyChanged(nameof(TotalModelCount));
         OnPropertyChanged(nameof(HasPowerBiTenants));
     }
 
