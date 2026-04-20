@@ -536,7 +536,9 @@
                                           CommandParameter="Partitions" />
                             <ToggleButton Content="TRACE"
                                           Style="{StaticResource TabButton}"
-                                          IsEnabled="False" />
+                                          IsChecked="{Binding IsTraceTab, Mode=OneWay}"
+                                          Command="{Binding SwitchTabCommand}"
+                                          CommandParameter="Trace" />
                             <ToggleButton Content="HISTORY"
                                           Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsHistoryTab, Mode=OneWay}"
@@ -557,6 +559,9 @@
                         </Grid>
                         <Grid Visibility="{Binding IsHistoryTab, Converter={StaticResource BoolToVisibleConverter}}">
                             <views:HistoryView DataContext="{Binding History}" />
+                        </Grid>
+                        <Grid Visibility="{Binding IsTraceTab, Converter={StaticResource BoolToVisibleConverter}}">
+                            <views:TraceView DataContext="{Binding Trace}" />
                         </Grid>
                     </Grid>
                 </Grid>
