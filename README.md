@@ -108,10 +108,11 @@ TOM `Server` is not thread-safe — sharing a connection between a blocking `Sav
 | Milestone | Status | Description |
 |---|---|---|
 | 1 — Connect and browse | **Done** | MSAL auth, sidebar model tree, shell UI |
-| 2 — Partition grid | Pending | Partition map from TOM + DMV row counts |
-| 3 — Refresh engine | Pending | Trigger refreshes, persist history to SQLite |
-| 4 — Live trace | Pending | Stream trace events to UI via `Channel<T>` |
-| 5 — Power BI Enhanced Refresh | Pending | Cancel support, REST API path |
+| 2 — Partition map | **Done** | Partition tiles from TOM + DMV stats, selection, fill bar |
+| 3 — Refresh engine | **Done** | TOM refresh, SQLite history, Power BI Enhanced Refresh history sync |
+| 4 — UX polish | **Done** | Partition cache, refresh confirm dialog, workspace context bar, theming |
+| 5 — Live trace | **Done** | Event streaming, filtering, SQLite persistence |
+| 6 — Power BI Enhanced Refresh | Pending | Cancel support, REST API refresh path |
 
 ---
 
