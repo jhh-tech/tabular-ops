@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+
+# SQLite databases
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# MSAL token cache
+msal.cache
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# NuGet
+*.nupkg
+packages/
+
+# OS
+.DS_Store
+Thumbs.db
