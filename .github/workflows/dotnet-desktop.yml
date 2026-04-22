@@ -1,0 +1,60 @@
+name: .NET Core Desktop
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: TabularOps.slnx
+      Test_Project_Path: tests\TabularOps.Core.Tests\TabularOps.Core.Tests.csproj
+      Desktop_Project_Path: src\TabularOps.Desktop\TabularOps.Desktop.csproj
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore
+      run: dotnet restore $env:Solution_Name
+
+    - name: Execute unit tests
+      run: dotnet test $env:Test_Project_Path --configuration $env:Configuration --no-restore
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    - name: Build
+      run: dotnet build $env:Solution_Name --configuration $env:Configuration --no-restore
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    - name: Publish
+      if: matrix.configuration == 'Release'
+      run: dotnet publish $env:Desktop_Project_Path --configuration Release --runtime win-x64 --self-contained false --output publish\
+      
+    - name: Upload build artifacts
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: TabularOps-Desktop
+        path: publish\
