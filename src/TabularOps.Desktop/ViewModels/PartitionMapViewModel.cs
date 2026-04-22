@@ -180,6 +180,7 @@ public partial class PartitionMapViewModel : ObservableObject
     [ObservableProperty] private string? _refreshStatus;
     [ObservableProperty] private RefreshTypeOption _selectedRefreshType = RefreshTypeOptions[0];
     [ObservableProperty] private string? _totalModelSize;
+    [ObservableProperty] private string _partitionNameFilter = string.Empty;
 
 
     public bool IsFilterAll        => ActiveFilter == PartitionFilter.All;
@@ -412,6 +413,19 @@ public partial class PartitionMapViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFilterRefreshing));
     }
 
+    partial void OnPartitionNameFilterChanged(string value) => ApplyFilter();
+
+    [RelayCommand(CanExecute = nameof(CanMutateSelected))]
+    private void MergePartitions() { }
+
+    [RelayCommand(CanExecute = nameof(CanMutateSelected))]
+    private void DropPartitions() { }
+
+    [RelayCommand]
+    private void NewPartition() { }
+
+    private bool CanMutateSelected() => _selectedKeys.Count > 0;
+
     private void ApplyFilter()
     {
         IEnumerable<TableSnapshot> source = _snapshots;
@@ -425,7 +439,7 @@ public partial class PartitionMapViewModel : ObservableObject
                 PartitionFilter.Refreshing => PartitionState.Refreshing,
                 _                          => throw new InvalidOperationException()
             };
-            source = _snapshots
+            source = source
                 .Select(s =>
                 {
                     var filtered = s.Partitions.Where(p => p.State == matchState).ToList();
@@ -435,6 +449,27 @@ public partial class PartitionMapViewModel : ObservableObject
                         PartitionCount        = filtered.Count,
                         TotalRowCount         = filtered.Sum(p => p.RowCount ?? 0),
                         TotalSizeBytes        = filtered.Sum(p => p.SizeBytes ?? 0),
+                    };
+                })
+                .Where(s => s.Partitions.Any());
+        }
+
+        var nameFilter = PartitionNameFilter.Trim();
+        if (!string.IsNullOrEmpty(nameFilter))
+        {
+            source = source
+                .Select(s =>
+                {
+                    var filtered = s.Partitions
+                        .Where(p => p.PartitionName.Contains(nameFilter, StringComparison.OrdinalIgnoreCase)
+                                 || p.TableName.Contains(nameFilter, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    return s with
+                    {
+                        Partitions     = filtered,
+                        PartitionCount = filtered.Count,
+                        TotalRowCount  = filtered.Sum(p => p.RowCount ?? 0),
+                        TotalSizeBytes = filtered.Sum(p => p.SizeBytes ?? 0),
                     };
                 })
                 .Where(s => s.Partitions.Any());

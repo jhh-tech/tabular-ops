@@ -11,8 +11,10 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Toolbar: filter chips + reload -->
+            <!-- Toolbar: type picker + reload -->
             <RowDefinition Height="40" />
+            <!-- Action bar: actions + filter chips + name filter + legend -->
+            <RowDefinition Height="38" />
             <!-- Content -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -97,8 +99,212 @@
             </Grid>
         </Border>
 
+        <!-- ═══════════════════════════════ ACTION BAR ═══════════════════════════════ -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource Bg1}"
+                BorderBrush="{DynamicResource Border}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="12,0">
+                <Grid.ColumnDefinitions>
+                    <!-- Refresh selected + separator + Merge/New/Drop -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Fill spacer -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Filter chips -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Text filter -->
+                    <ColumnDefinition Width="156" />
+                    <!-- Separator -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Legend -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Refresh selected | Merge | New partition | Drop -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <!-- Refresh selected (accent) -->
+                    <Button Style="{StaticResource PrimaryButton}"
+                            Command="{Binding RefreshSelectedCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            Padding="10,4">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⟳ Refresh selected" VerticalAlignment="Center" />
+                            <Border Background="{DynamicResource Bg0}"
+                                    CornerRadius="2"
+                                    Padding="4,1"
+                                    Margin="7,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Opacity="0.6">
+                                <TextBlock Text="F5"
+                                           FontFamily="{StaticResource MonoFont}"
+                                           FontSize="9"
+                                           Foreground="{DynamicResource Text0}" />
+                            </Border>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Separator -->
+                    <Border Width="1" Height="18" Background="{DynamicResource Border}"
+                            Margin="8,0" VerticalAlignment="Center" />
+
+                    <!-- Merge -->
+                    <Button Content="⊞ Merge"
+                            Style="{StaticResource FlatButton}"
+                            Command="{Binding MergePartitionsCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            Margin="0,0,4,0" />
+
+                    <!-- New partition -->
+                    <Button Content="+ New partition"
+                            Style="{StaticResource FlatButton}"
+                            Command="{Binding NewPartitionCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            Margin="0,0,4,0" />
+
+                    <!-- Drop -->
+                    <Button Style="{StaticResource DangerButton}"
+                            Command="{Binding DropPartitionsCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="×"
+                                       Foreground="{DynamicResource Error}"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,3,0" />
+                            <TextBlock Text="Drop"
+                                       Foreground="{DynamicResource Error}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
+
+                <!-- Filter chips -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <ToggleButton Style="{StaticResource FilterChip}"
+                                  Content="All"
+                                  IsChecked="{Binding IsFilterAll, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.All}" />
+                    <ToggleButton Style="{StaticResource FilterChip}"
+                                  Content="Stale"
+                                  IsChecked="{Binding IsFilterStale, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Stale}" />
+                    <ToggleButton Style="{StaticResource FilterChip}"
+                                  Content="Failed"
+                                  IsChecked="{Binding IsFilterFailed, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Failed}" />
+                    <ToggleButton Style="{StaticResource FilterChip}"
+                                  Content="Refreshing"
+                                  IsChecked="{Binding IsFilterRefreshing, Mode=OneWay}"
+                                  Command="{Binding SetFilterCommand}"
+                                  CommandParameter="{x:Static vm:PartitionFilter.Refreshing}" />
+                </StackPanel>
+
+                <!-- Text filter -->
+                <Border Grid.Column="3"
+                        BorderBrush="{DynamicResource Border}"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Background="{DynamicResource Bg2}"
+                        VerticalAlignment="Center"
+                        Height="24">
+                    <Grid>
+                        <TextBox x:Name="PartitionFilterBox"
+                                 Text="{Binding PartitionNameFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="{StaticResource MonoFont}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource Text1}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="6,0"
+                                 VerticalContentAlignment="Center"
+                                 CaretBrush="{DynamicResource Text0}" />
+                        <!-- Placeholder + "/" hint -->
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="7,0,6,0"
+                                    IsHitTestVisible="False">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PartitionNameFilter}" Value="">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="filter partitions…"
+                                       FontFamily="{StaticResource MonoFont}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Text3}" />
+                            <Border Background="{DynamicResource Bg3}"
+                                    BorderBrush="{DynamicResource Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="2"
+                                    Padding="3,0"
+                                    Margin="6,0,0,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="/"
+                                           FontFamily="{StaticResource MonoFont}"
+                                           FontSize="9"
+                                           Foreground="{DynamicResource Text3}" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Separator -->
+                <Border Grid.Column="4" Width="1" Height="18" Background="{DynamicResource Border}"
+                        Margin="12,0" VerticalAlignment="Center" />
+
+                <!-- Legend -->
+                <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="OK"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="10"
+                               Foreground="{DynamicResource Text3}"
+                               VerticalAlignment="Center" />
+                    <Border Width="10" Height="10"
+                            BorderBrush="{DynamicResource Accent}"
+                            BorderThickness="1"
+                            Margin="4,0,10,0"
+                            VerticalAlignment="Center" />
+                    <TextBlock Text="Refreshing"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="10"
+                               Foreground="{DynamicResource Text3}"
+                               VerticalAlignment="Center" />
+                    <Border Width="10" Height="10"
+                            BorderBrush="{DynamicResource Info}"
+                            BorderThickness="1"
+                            Margin="4,0,10,0"
+                            VerticalAlignment="Center" />
+                    <TextBlock Text="Failed"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="10"
+                               Foreground="{DynamicResource Text3}"
+                               VerticalAlignment="Center" />
+                    <Border Width="10" Height="10"
+                            BorderBrush="{DynamicResource Error}"
+                            BorderThickness="1"
+                            Margin="4,0,0,0"
+                            VerticalAlignment="Center" />
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
         <!-- ═══════════════════════════════ CONTENT ═══════════════════════════════ -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
 
             <!-- Pulsing bar: shows for both first-load and background refresh -->
             <Border Height="2" VerticalAlignment="Top" Panel.ZIndex="1">
