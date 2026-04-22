@@ -137,11 +137,6 @@
                     BorderBrush="{DynamicResource Border}"
                     BorderThickness="0,0,1,0">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
                     <!-- Restore progress bar — shown while connections are loading on startup -->
                     <Border Grid.Row="0"
                             Height="2"
@@ -395,18 +390,6 @@
                                    Margin="0,4,0,0" />
                     </StackPanel>
 
-                    <!-- Sidebar footer: Add connection -->
-                    <Border Grid.Row="1"
-                            BorderBrush="{DynamicResource Border}"
-                            BorderThickness="0,1,0,0">
-                        <Button Content="+ Connect"
-                                Style="{StaticResource FlatButton}"
-                                Command="{Binding AddConnectionCommand}"
-                                BorderThickness="0"
-                                Padding="12,8"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left" />
-                    </Border>
                 </Grid>
             </Border>
 
