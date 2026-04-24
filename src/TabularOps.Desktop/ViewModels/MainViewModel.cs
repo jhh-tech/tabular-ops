@@ -106,7 +106,7 @@ public partial class MainViewModel : ObservableObject
     {
         _connectionManager = connectionManager;
         _connectionStore = connectionStore;
-        Overview = new OverviewViewModel(connectionManager, App.RefreshEngine);
+        Overview = new OverviewViewModel(connectionManager, App.RefreshEngine, App.BackupService, App.BackupStore);
         PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine, App.PartitionCache);
         History = new HistoryViewModel(App.RefreshHistory, connectionManager);
         Trace = new TraceViewModel(connectionManager);

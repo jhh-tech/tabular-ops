@@ -116,36 +116,35 @@ Do NOT try to build everything at once. Follow this order — each milestone is 
 - **ComboBox theming**: full custom `ControlTemplate` for ComboBox + ComboBoxItem using `DynamicResource` colors
 - **Light/dark theme toggle**: runtime swap via `ThemeManager`; preference persisted to disk; all controls use `{DynamicResource}` throughout
 
-### Milestone 5: Live trace (next)
+### Milestone 5: Live trace (pending)
 - Adapt trace subscription from `AsTrace`
 - Stream events to UI via `Channel<TraceEvent>`
 - Trace list with detail pane
 - Event filter chips (Progress / Query / Errors / Lock / Audit)
 - **Done when:** starting a refresh causes live events to stream into the trace view, and failures show full error context in detail pane
 
-### Milestone 6: GUI alignment with spec
-Audit the entire UI against `docs/ui-prototype/tabular-ops-console.html` and `docs/ui-design.md`. Fix every deviation — layout dimensions, spacing, color token usage, typography, and interactive states.
+### ✅ Milestone 6: GUI alignment with spec — DONE (commit 4a7fdd1)
+- JetBrains Mono Bold/SemiBold fonts downloaded; all weight variants now render correctly
+- Light theme color fixes (bg-1 was pure white, making sidebar indistinguishable from content)
+- Startup performance: ADOMD connections deferred to first use, halving network round-trips
+- Removed duplicate Connect button from sidebar footer
+- Partition map redesigned: floating selection tray replaces toolbar ComboBox; per-mode refresh buttons
+- Overview tab added: metric cards (size, rows, partitions, tables) + detail rows (last processed, memory, CL, endpoint, capacity SKU/name/region)
+- Process model dropdown in Overview toolbar for whole-model refreshes in any mode
+- All unimplemented buttons disabled with "Coming soon" tooltips
 
-Scope:
-- **Fonts**: Verify IBM Plex Sans and JetBrains Mono are actually rendering (not silently falling back to system fonts). Apply correct font per element class: sans for labels/buttons/nav, mono for all data/IDs/paths/timestamps
-- **Color tokens**: Audit every hardcoded color — replace with `{DynamicResource}` equivalents. Verify light theme renders correctly (run through all views in light mode)
-- **Layout**: Topbar 38px, context bar 32px, tab strip 36px, status bar 22px — verify pixel-exact against spec. Check sidebar width, splitter behavior
-- **Partition tiles**: Border color, background tint, opacity, and fill bar match the state table in `ui-design.md`. Stale tiles at 65% opacity. Refreshing tiles pulse
-- **Context bar**: All fields present (workspace, endpoint type, CL, model count, capacity SKU/name/region). Capacity section only shown for Premium/Fabric workspaces
-- **Trace view**: Filter chips match spec (Progress / Query / Errors / Lock / Audit). Detail pane layout
-- **History view**: Scatter chart and run list match spec layout. Status badges use correct color tokens
-- **Dialogs**: `AddConnectionDialog` and `RefreshConfirmDialog` match prototype styling
-- **Interactive states**: Hover backgrounds (`Bg2`/`Bg3`), active model highlight, disabled tab opacity
+### 🚧 Milestone 7: Backup (in progress)
+- `BackupService` + `BackupStore`: TOM `Database.Backup()` → ABF file, SQLite run history
+- Overview toolbar: "Backup model" → SaveFileDialog → backup → last backup date updated in UI
+- **Done when:** clicking Backup model on a connected SSAS/AAS or Power BI Premium model saves a `.abf` file and shows the completion date in the Overview tab
 
-**Done when:** a side-by-side comparison of the running app against the HTML prototype shows no visible deviations in any view, in both dark and light themes.
-
-### Milestone 7: Power BI Enhanced Refresh path
+### Milestone 8: Power BI Enhanced Refresh path
 - Detect `powerbi://` connection strings, route to REST API
 - Implement Cancel action (the thing SSMS can't do)
 - Retry/timeout configuration per refresh
 - **Done when:** a running refresh on a Power BI model can be cancelled from the selection tray
 
-### Milestone 8+ (nice to have, not MVP)
+### Milestone 9+ (nice to have, not MVP)
 - Sessions view (via `DISCOVER_SESSIONS`)
 - Memory breakdown view (Vertipaq-style)
 - DAX query window

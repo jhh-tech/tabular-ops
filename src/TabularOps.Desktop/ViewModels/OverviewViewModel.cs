@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.AnalysisServices.Tabular;
+using Microsoft.Win32;
 using TabularOps.Core.Connection;
 using TabularOps.Core.Dmv;
 using TabularOps.Core.Model;
@@ -12,10 +13,13 @@ public partial class OverviewViewModel : ObservableObject
 {
     private readonly ConnectionManager _connectionManager;
     private readonly TomRefreshEngine _refreshEngine;
+    private readonly BackupService _backupService;
+    private readonly BackupStore _backupStore;
     private ModelRef? _currentModel;
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isProcessing;
+    [ObservableProperty] private bool _isBackingUp;
     [ObservableProperty] private string _modelName = "—";
     [ObservableProperty] private string _endpointType = "—";
     [ObservableProperty] private string _compatibilityLevel = "—";
@@ -35,10 +39,19 @@ public partial class OverviewViewModel : ObservableObject
     /// <summary>True when this is a Power BI workspace on a named capacity.</summary>
     public bool HasCapacityInfo => CapacitySku is not null;
 
-    public OverviewViewModel(ConnectionManager connectionManager, TomRefreshEngine refreshEngine)
+    public bool CanProcess => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
+    public bool CanBackup  => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
+
+    public OverviewViewModel(
+        ConnectionManager connectionManager,
+        TomRefreshEngine refreshEngine,
+        BackupService backupService,
+        BackupStore backupStore)
     {
         _connectionManager = connectionManager;
-        _refreshEngine = refreshEngine;
+        _refreshEngine     = refreshEngine;
+        _backupService     = backupService;
+        _backupStore       = backupStore;
     }
 
     public async Task LoadAsync(ModelRef model, CancellationToken ct = default)
@@ -47,6 +60,7 @@ public partial class OverviewViewModel : ObservableObject
         IsLoading = true;
         ErrorMessage = null;
         ProcessStatus = null;
+        NotifyCanExecuteChanged();
 
         try
         {
@@ -88,6 +102,10 @@ public partial class OverviewViewModel : ObservableObject
             CapacityRegion = ctx?.CapacityRegion;
             OnPropertyChanged(nameof(HasCapacityInfo));
 
+            // ── SQLite: last successful backup ────────────────────────────────
+            var lastRun = await _backupStore.GetLastBackupAsync(model.TenantId, model.DatabaseName, ct);
+            LastBackup = lastRun?.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
+
             // ── DMV: compressed storage size + total row count ────────────────
             try
             {
@@ -106,10 +124,6 @@ public partial class OverviewViewModel : ObservableObject
                 MemoryUsage = memBytes.HasValue ? FormatBytes(memBytes.Value) : "—";
             }
             catch { MemoryUsage = "—"; }
-
-            // ── Last backup: tracked in SQLite once backup is implemented ─────
-            // TODO: query backup history store when implemented
-            LastBackup = "—";
         }
         catch (Exception ex)
         {
@@ -118,6 +132,7 @@ public partial class OverviewViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            NotifyCanExecuteChanged();
         }
     }
 
@@ -152,30 +167,69 @@ public partial class OverviewViewModel : ObservableObject
         finally
         {
             IsProcessing = false;
+            NotifyCanExecuteChanged();
         }
-    }
-
-    public bool CanProcess => _currentModel is not null && !IsProcessing && !IsLoading;
-
-    partial void OnIsProcessingChanged(bool value)
-    {
-        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(CanProcess));
-    }
-
-    partial void OnIsLoadingChanged(bool value)
-    {
-        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(CanProcess));
     }
 
     // ── Backup ────────────────────────────────────────────────────────────────
 
-    [RelayCommand]
-    private void BackupModel()
+    [RelayCommand(CanExecute = nameof(CanBackup))]
+    private async Task BackupModel()
     {
-        // TODO Milestone 7+: open SaveFileDialog, call TOM Database.Backup(), record date in SQLite
+        if (_currentModel is null) return;
+
+        // Open SaveFileDialog on the UI thread before going async
+        var dialog = new SaveFileDialog
+        {
+            Title            = "Backup tabular model",
+            Filter           = "Analysis Services Backup (*.abf)|*.abf",
+            DefaultExt       = ".abf",
+            FileName         = $"{_currentModel.DatabaseName}_{DateTime.Now:yyyyMMdd_HHmm}.abf",
+            OverwritePrompt  = true,
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        var filePath = dialog.FileName;
+
+        IsBackingUp = true;
+        ProcessStatus = "Backing up model…";
+
+        try
+        {
+            var run = await _backupService.BackupAsync(
+                _currentModel.TenantId,
+                _currentModel.DatabaseName,
+                filePath);
+
+            var size = run.FileSizeBytes.HasValue ? $" ({FormatBytes(run.FileSizeBytes.Value)})" : "";
+            ProcessStatus = $"Backup complete{size}";
+            LastBackup = run.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
+        }
+        catch (Exception ex)
+        {
+            ProcessStatus = $"Backup failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBackingUp = false;
+            NotifyCanExecuteChanged();
+        }
     }
+
+    // ── Plumbing ──────────────────────────────────────────────────────────────
+
+    private void NotifyCanExecuteChanged()
+    {
+        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
+        BackupModelCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanProcess));
+        OnPropertyChanged(nameof(CanBackup));
+    }
+
+    partial void OnIsProcessingChanged(bool value) => NotifyCanExecuteChanged();
+    partial void OnIsLoadingChanged(bool value)    => NotifyCanExecuteChanged();
+    partial void OnIsBackingUpChanged(bool value)  => NotifyCanExecuteChanged();
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

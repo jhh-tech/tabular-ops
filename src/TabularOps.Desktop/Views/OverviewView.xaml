@@ -88,14 +88,28 @@
                     <!-- Separator -->
                     <Border Width="1" Height="18" Background="{DynamicResource Border}" Margin="8,0" VerticalAlignment="Center" />
 
-                    <!-- Backup — not yet implemented (Milestone 7+) -->
-                    <Button Content="⬛ Backup model"
-                            Style="{StaticResource FlatButton}"
+                    <!-- Backup -->
+                    <Button Style="{StaticResource FlatButton}"
                             Command="{Binding BackupModelCommand}"
+                            IsEnabled="{Binding CanBackup}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
-                            IsEnabled="False"
-                            ToolTip="Coming soon — backup this model to an ABF file" />
+                            ToolTip="Backup this model to an ABF file">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="⬛ Backup model" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBackingUp}" Value="True">
+                                                <Setter Property="Text" Value="⬛ Backing up…" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
 
                     <!-- Process status -->
                     <TextBlock Text="{Binding ProcessStatus}"
