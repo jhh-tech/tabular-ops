@@ -161,7 +161,7 @@ public partial class OverviewViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ProcessStatus = $"Failed: {ex.Message}";
+            ProcessStatus = $"Failed: {TrimXmlaError(ex.Message)}";
         }
         finally
         {
@@ -192,8 +192,9 @@ public partial class OverviewViewModel : ObservableObject
         catch (Exception ex)
         {
             // Common cause: backup storage not configured on the server/workspace.
-            // Surface the server message directly — it's usually descriptive enough.
-            ProcessStatus = $"Backup failed: {ex.Message}";
+            // XMLA errors append " Technical Details: RootActivityId: <guid> Date (UTC): ..."
+            // which is noise — strip it and show only the human-readable sentence.
+            ProcessStatus = $"Backup failed: {TrimXmlaError(ex.Message)}";
         }
         finally
         {
@@ -217,6 +218,17 @@ public partial class OverviewViewModel : ObservableObject
     partial void OnIsBackingUpChanged(bool value)  => NotifyCanExecuteChanged();
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Power BI / AAS XMLA errors append " Technical Details: RootActivityId: &lt;guid&gt;
+    /// Date (UTC): ..." after the human-readable message. Strip everything from
+    /// "Technical Details:" onward so the status bar stays readable.
+    /// </summary>
+    private static string TrimXmlaError(string message)
+    {
+        var cut = message.IndexOf("Technical Details:", StringComparison.OrdinalIgnoreCase);
+        return cut > 0 ? message[..cut].Trim().TrimEnd('.', ',', ' ') : message;
+    }
 
     private static string FormatBytes(long b) => b switch
     {
