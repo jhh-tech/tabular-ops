@@ -123,13 +123,29 @@ Do NOT try to build everything at once. Follow this order — each milestone is 
 - Event filter chips (Progress / Query / Errors / Lock / Audit)
 - **Done when:** starting a refresh causes live events to stream into the trace view, and failures show full error context in detail pane
 
-### Milestone 6: Power BI Enhanced Refresh path
+### Milestone 6: GUI alignment with spec
+Audit the entire UI against `docs/ui-prototype/tabular-ops-console.html` and `docs/ui-design.md`. Fix every deviation — layout dimensions, spacing, color token usage, typography, and interactive states.
+
+Scope:
+- **Fonts**: Verify IBM Plex Sans and JetBrains Mono are actually rendering (not silently falling back to system fonts). Apply correct font per element class: sans for labels/buttons/nav, mono for all data/IDs/paths/timestamps
+- **Color tokens**: Audit every hardcoded color — replace with `{DynamicResource}` equivalents. Verify light theme renders correctly (run through all views in light mode)
+- **Layout**: Topbar 38px, context bar 32px, tab strip 36px, status bar 22px — verify pixel-exact against spec. Check sidebar width, splitter behavior
+- **Partition tiles**: Border color, background tint, opacity, and fill bar match the state table in `ui-design.md`. Stale tiles at 65% opacity. Refreshing tiles pulse
+- **Context bar**: All fields present (workspace, endpoint type, CL, model count, capacity SKU/name/region). Capacity section only shown for Premium/Fabric workspaces
+- **Trace view**: Filter chips match spec (Progress / Query / Errors / Lock / Audit). Detail pane layout
+- **History view**: Scatter chart and run list match spec layout. Status badges use correct color tokens
+- **Dialogs**: `AddConnectionDialog` and `RefreshConfirmDialog` match prototype styling
+- **Interactive states**: Hover backgrounds (`Bg2`/`Bg3`), active model highlight, disabled tab opacity
+
+**Done when:** a side-by-side comparison of the running app against the HTML prototype shows no visible deviations in any view, in both dark and light themes.
+
+### Milestone 7: Power BI Enhanced Refresh path
 - Detect `powerbi://` connection strings, route to REST API
 - Implement Cancel action (the thing SSMS can't do)
 - Retry/timeout configuration per refresh
 - **Done when:** a running refresh on a Power BI model can be cancelled from the selection tray
 
-### Milestone 7+ (nice to have, not MVP)
+### Milestone 8+ (nice to have, not MVP)
 - Sessions view (via `DISCOVER_SESSIONS`)
 - Memory breakdown view (Vertipaq-style)
 - DAX query window

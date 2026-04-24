@@ -2,10 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Background -->
-    <Color x:Key="Bg0Color">#F0F3F7</Color>
-    <Color x:Key="Bg1Color">#FFFFFF</Color>
-    <Color x:Key="Bg2Color">#E8ECF1</Color>
-    <Color x:Key="Bg3Color">#DCE1E9</Color>
+    <Color x:Key="Bg0Color">#F5F7FA</Color>
+    <Color x:Key="Bg1Color">#EBEEF2</Color>
+    <Color x:Key="Bg2Color">#FFFFFF</Color>
+    <Color x:Key="Bg3Color">#DDE2E9</Color>
 
     <SolidColorBrush x:Key="Bg0" Color="{StaticResource Bg0Color}" />
     <SolidColorBrush x:Key="Bg1" Color="{StaticResource Bg1Color}" />
@@ -20,10 +20,10 @@
     <SolidColorBrush x:Key="BorderStrong" Color="{StaticResource BorderStrongColor}" />
 
     <!-- Text -->
-    <Color x:Key="Text0Color">#0D1117</Color>
-    <Color x:Key="Text1Color">#24292F</Color>
-    <Color x:Key="Text2Color">#57606A</Color>
-    <Color x:Key="Text3Color">#8B949E</Color>
+    <Color x:Key="Text0Color">#1A2130</Color>
+    <Color x:Key="Text1Color">#3D4A5C</Color>
+    <Color x:Key="Text2Color">#6B7684</Color>
+    <Color x:Key="Text3Color">#9BA5B0</Color>
 
     <SolidColorBrush x:Key="Text0" Color="{StaticResource Text0Color}" />
     <SolidColorBrush x:Key="Text1" Color="{StaticResource Text1Color}" />
@@ -33,7 +33,7 @@
     <!-- Semantic (same as dark theme — accent/error/warn read fine on light backgrounds) -->
     <Color x:Key="AccentColor">#0E9E87</Color>
     <Color x:Key="AccentDimColor">#D0F0EB</Color>
-    <Color x:Key="WarnColor">#B45309</Color>
+    <Color x:Key="WarnColor">#B87816</Color>
     <Color x:Key="ErrorColor">#C0392B</Color>
     <Color x:Key="SuccessColor">#2D8A3E</Color>
     <Color x:Key="InfoColor">#1D6FB8</Color>

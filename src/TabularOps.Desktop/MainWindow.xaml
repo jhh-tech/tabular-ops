@@ -137,11 +137,6 @@
                     BorderBrush="{DynamicResource Border}"
                     BorderThickness="0,0,1,0">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
                     <!-- Restore progress bar — shown while connections are loading on startup -->
                     <Border Grid.Row="0"
                             Height="2"
@@ -395,18 +390,6 @@
                                    Margin="0,4,0,0" />
                     </StackPanel>
 
-                    <!-- Sidebar footer: Add connection -->
-                    <Border Grid.Row="1"
-                            BorderBrush="{DynamicResource Border}"
-                            BorderThickness="0,1,0,0">
-                        <Button Content="+ Connect"
-                                Style="{StaticResource FlatButton}"
-                                Command="{Binding AddConnectionCommand}"
-                                BorderThickness="0"
-                                Padding="12,8"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left" />
-                    </Border>
                 </Grid>
             </Border>
 
@@ -556,6 +539,13 @@
                             BorderBrush="{DynamicResource Border}"
                             BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal">
+                            <!-- Overview tab -->
+                            <ToggleButton Content="Overview"
+                                          Style="{StaticResource TabButton}"
+                                          IsChecked="{Binding IsOverviewTab, Mode=OneWay}"
+                                          Command="{Binding SwitchTabCommand}"
+                                          CommandParameter="Overview" />
+
                             <!-- Partitions tab with count badge -->
                             <ToggleButton Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsPartitionsTab, Mode=OneWay}"
@@ -630,6 +620,9 @@
                     <!-- Each tab is wrapped in a Grid so Visibility binds to MainViewModel
                          (the parent DataContext), not to the view's own DataContext. -->
                     <Grid Grid.Row="2">
+                        <Grid Visibility="{Binding IsOverviewTab, Converter={StaticResource BoolToVisibleConverter}}">
+                            <views:OverviewView DataContext="{Binding Overview}" />
+                        </Grid>
                         <Grid Visibility="{Binding IsPartitionsTab, Converter={StaticResource BoolToVisibleConverter}}">
                             <views:PartitionMapView DataContext="{Binding PartitionMap}" />
                         </Grid>

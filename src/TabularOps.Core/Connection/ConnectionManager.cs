@@ -261,6 +261,7 @@ public sealed class ConnectionManager : IAsyncDisposable
         }
         else
         {
+            await EnsurePollConnectionAsync(state, ct);
             connection = state.PollConnection!;
         }
 
@@ -395,14 +396,20 @@ public sealed class ConnectionManager : IAsyncDisposable
         if (!state.TomServer.Connected)
             await Task.Run(() => state.TomServer.Connect(cs), ct);
 
-        if (state.PollConnection is null || state.PollConnection.State != System.Data.ConnectionState.Open)
-        {
-            state.PollConnection?.Dispose();
-            state.PollConnection = new AdomdConnection(cs);
-            await Task.Run(() => state.PollConnection.Open(), ct);
-        }
-
         state.ConnectionError = null;
+    }
+
+    // Opens the ADOMD poll connection lazily — only when the tenant becomes active
+    // or a DMV query is issued. Avoids opening a second connection for every tenant
+    // at startup when only one will ever be active at a time.
+    private async Task EnsurePollConnectionAsync(TenantState state, CancellationToken ct)
+    {
+        if (state.PollConnection?.State == System.Data.ConnectionState.Open) return;
+
+        var cs = await BuildConnectionStringAsync(state, ct);
+        state.PollConnection?.Dispose();
+        state.PollConnection = new AdomdConnection(cs);
+        await Task.Run(() => state.PollConnection.Open(), ct);
     }
 
     private async Task<string> BuildConnectionStringAsync(TenantState state, CancellationToken ct)
