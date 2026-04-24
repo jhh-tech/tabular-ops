@@ -26,8 +26,9 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsOverviewTab   => ActiveTab == "Overview";
     public bool IsPartitionsTab => ActiveTab == "Partitions";
-    public bool IsHistoryTab    => ActiveTab == "History";
     public bool IsTraceTab      => ActiveTab == "Trace";
+    public bool IsLineageTab    => ActiveTab == "Lineage";
+    public bool IsHistoryTab    => ActiveTab == "History";
 
     /// <summary>
     /// UPN of the connected Entra account (e.g. user@contoso.com).
@@ -98,6 +99,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HistoryCount));
         OnPropertyChanged(nameof(IsTraceRunning));
         OnPropertyChanged(nameof(IsOverviewTab));
+        OnPropertyChanged(nameof(IsLineageTab));
         OnPropertyChanged(nameof(TotalModelCount));
         OnPropertyChanged(nameof(HasPowerBiTenants));
     }
@@ -118,8 +120,9 @@ public partial class MainViewModel : ObservableObject
         ActiveTab = tab;
         OnPropertyChanged(nameof(IsOverviewTab));
         OnPropertyChanged(nameof(IsPartitionsTab));
-        OnPropertyChanged(nameof(IsHistoryTab));
         OnPropertyChanged(nameof(IsTraceTab));
+        OnPropertyChanged(nameof(IsLineageTab));
+        OnPropertyChanged(nameof(IsHistoryTab));
 
         if (tab == "Overview" && ActiveModel is not null)
             await Overview.LoadAsync(ActiveModel.Model);
@@ -362,6 +365,12 @@ public partial class MainViewModel : ObservableObject
         {
             ActiveModel = null;
         }
+
+        // Always refresh derived counts — RaiseActiveContextChanged is only called
+        // via OnActiveTenantChanged when the active tenant changed, which doesn't
+        // happen when removing a non-active workspace.
+        OnPropertyChanged(nameof(TotalModelCount));
+        OnPropertyChanged(nameof(HasPowerBiTenants));
 
         await _connectionManager.RemoveTenantAsync(tenant.TenantId);
         await SaveConnectionsAsync();

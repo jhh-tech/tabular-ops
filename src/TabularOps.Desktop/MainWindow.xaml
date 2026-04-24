@@ -585,6 +585,13 @@
                                 </StackPanel>
                             </ToggleButton>
 
+                            <!-- Lineage tab (placeholder) -->
+                            <ToggleButton Content="Lineage"
+                                          Style="{StaticResource TabButton}"
+                                          IsChecked="{Binding IsLineageTab, Mode=OneWay}"
+                                          Command="{Binding SwitchTabCommand}"
+                                          CommandParameter="Lineage" />
+
                             <!-- History tab with count badge -->
                             <ToggleButton Style="{StaticResource TabButton}"
                                           IsChecked="{Binding IsHistoryTab, Mode=OneWay}"
@@ -625,6 +632,21 @@
                         </Grid>
                         <Grid Visibility="{Binding IsPartitionsTab, Converter={StaticResource BoolToVisibleConverter}}">
                             <views:PartitionMapView DataContext="{Binding PartitionMap}" />
+                        </Grid>
+                        <Grid Visibility="{Binding IsLineageTab, Converter={StaticResource BoolToVisibleConverter}}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.4">
+                                <TextBlock Text="Lineage"
+                                           FontFamily="{StaticResource SansFont}"
+                                           FontSize="15" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Text0}"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Coming soon — visual data lineage for tables and measures"
+                                           FontFamily="{StaticResource SansFont}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource Text2}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,6,0,0" />
+                            </StackPanel>
                         </Grid>
                         <Grid Visibility="{Binding IsHistoryTab, Converter={StaticResource BoolToVisibleConverter}}">
                             <views:HistoryView DataContext="{Binding History}" />

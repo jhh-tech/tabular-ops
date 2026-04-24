@@ -39,6 +39,7 @@ public partial class OverviewViewModel : ObservableObject
     [ObservableProperty] private string? _capacityRegion;
     [ObservableProperty] private string? _processStatus;
     [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private bool _isProcessPopupOpen;
 
     /// <summary>True when this is a Power BI workspace on a named capacity.</summary>
     public bool HasCapacityInfo => CapacitySku is not null;
@@ -148,6 +149,7 @@ public partial class OverviewViewModel : ObservableObject
     {
         if (_currentModel is null || option is null) return;
 
+        IsProcessPopupOpen = false;   // dismiss dropdown immediately
         IsProcessing = true;
         StartProgressTimer($"Processing ({option.DisplayName})");
 

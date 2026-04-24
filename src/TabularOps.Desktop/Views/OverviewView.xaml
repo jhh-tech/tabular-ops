@@ -30,6 +30,7 @@
                                   FontFamily="{StaticResource MonoFont}"
                                   FontSize="11"
                                   IsEnabled="{Binding CanProcess}"
+                                  IsChecked="{Binding IsProcessPopupOpen, Mode=TwoWay}"
                                   Padding="8,4">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⟳ Process model" VerticalAlignment="Center" />
@@ -37,7 +38,7 @@
                         </StackPanel>
                     </ToggleButton>
 
-                    <Popup IsOpen="{Binding IsChecked, ElementName=ProcessToggle}"
+                    <Popup IsOpen="{Binding IsProcessPopupOpen, Mode=TwoWay}"
                            PlacementTarget="{Binding ElementName=ProcessToggle}"
                            Placement="Bottom"
                            StaysOpen="False"
