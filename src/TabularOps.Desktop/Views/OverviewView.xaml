@@ -24,7 +24,7 @@
 
                     <!-- Process model dropdown -->
                     <ToggleButton x:Name="ProcessToggle"
-                                  Style="{StaticResource FlatButton}"
+                                  Style="{StaticResource FlatToggleButton}"
                                   FontFamily="{StaticResource MonoFont}"
                                   FontSize="11"
                                   IsEnabled="{Binding CanProcess}"
@@ -47,7 +47,7 @@
                             <StackPanel>
                                 <Button Style="{StaticResource FlatButton}"
                                         Command="{Binding ProcessModelWithModeCommand}"
-                                        CommandParameter="{Binding RefreshTypeOptions[0], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
+                                        CommandParameter="{Binding [0], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
                                         HorizontalContentAlignment="Left"
                                         Padding="10,5" FontFamily="{StaticResource MonoFont}" FontSize="11">
                                     <StackPanel Orientation="Horizontal">
@@ -58,26 +58,26 @@
                                 <Button Content="⟳ Full"
                                         Style="{StaticResource FlatButton}"
                                         Command="{Binding ProcessModelWithModeCommand}"
-                                        CommandParameter="{Binding RefreshTypeOptions[1], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
+                                        CommandParameter="{Binding [1], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
                                         HorizontalContentAlignment="Left"
                                         Padding="10,5" FontFamily="{StaticResource MonoFont}" FontSize="11" />
                                 <Button Content="⟳ Data only"
                                         Style="{StaticResource FlatButton}"
                                         Command="{Binding ProcessModelWithModeCommand}"
-                                        CommandParameter="{Binding RefreshTypeOptions[2], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
+                                        CommandParameter="{Binding [2], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
                                         HorizontalContentAlignment="Left"
                                         Padding="10,5" FontFamily="{StaticResource MonoFont}" FontSize="11" />
                                 <Button Content="⟳ Calculate"
                                         Style="{StaticResource FlatButton}"
                                         Command="{Binding ProcessModelWithModeCommand}"
-                                        CommandParameter="{Binding RefreshTypeOptions[3], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
+                                        CommandParameter="{Binding [3], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
                                         HorizontalContentAlignment="Left"
                                         Padding="10,5" FontFamily="{StaticResource MonoFont}" FontSize="11" />
                                 <Border Height="1" Background="{DynamicResource Border}" Margin="6,2" />
                                 <Button Content="⟳ Clear values"
                                         Style="{StaticResource FlatButton}"
                                         Command="{Binding ProcessModelWithModeCommand}"
-                                        CommandParameter="{Binding RefreshTypeOptions[4], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
+                                        CommandParameter="{Binding [4], Source={x:Static vm:PartitionMapViewModel.RefreshTypeOptions}}"
                                         HorizontalContentAlignment="Left"
                                         Padding="10,5" FontFamily="{StaticResource MonoFont}" FontSize="11"
                                         Foreground="{DynamicResource Warn}" />

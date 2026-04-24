@@ -126,7 +126,7 @@ public partial class OverviewViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanProcess))]
     private async Task ProcessModelWithMode(RefreshTypeOption option)
     {
-        if (_currentModel is null) return;
+        if (_currentModel is null || option is null) return;
 
         IsProcessing = true;
         ProcessStatus = $"Processing model ({option.DisplayName})…";
