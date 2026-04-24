@@ -24,15 +24,14 @@ public sealed class BackupStore : IAsyncDisposable
         using var cmd = _db.CreateCommand();
         cmd.CommandText = """
             CREATE TABLE IF NOT EXISTS backup_runs (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id       TEXT    NOT NULL,
-                database_name   TEXT    NOT NULL,
-                file_path       TEXT    NOT NULL,
-                started_at      TEXT    NOT NULL,
-                completed_at    TEXT,
-                file_size_bytes INTEGER,
-                succeeded       INTEGER NOT NULL DEFAULT 0,
-                error_message   TEXT
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id     TEXT    NOT NULL,
+                database_name TEXT    NOT NULL,
+                file_name     TEXT    NOT NULL,
+                started_at    TEXT    NOT NULL,
+                completed_at  TEXT,
+                succeeded     INTEGER NOT NULL DEFAULT 0,
+                error_message TEXT
             );
             CREATE INDEX IF NOT EXISTS ix_backup_runs_model
                 ON backup_runs(tenant_id, database_name, started_at DESC);
@@ -42,7 +41,7 @@ public sealed class BackupStore : IAsyncDisposable
 
     /// <summary>Inserts a row before the backup starts and returns its id.</summary>
     public async Task<long> LogStartAsync(
-        string tenantId, string databaseName, string filePath,
+        string tenantId, string databaseName, string fileName,
         CancellationToken ct = default)
     {
         await _lock.WaitAsync(ct);
@@ -50,13 +49,13 @@ public sealed class BackupStore : IAsyncDisposable
         {
             using var cmd = _db.CreateCommand();
             cmd.CommandText = """
-                INSERT INTO backup_runs (tenant_id, database_name, file_path, started_at, succeeded)
+                INSERT INTO backup_runs (tenant_id, database_name, file_name, started_at, succeeded)
                 VALUES ($tid, $db, $file, $ts, 0);
                 SELECT last_insert_rowid();
                 """;
             cmd.Parameters.AddWithValue("$tid",  tenantId);
             cmd.Parameters.AddWithValue("$db",   databaseName);
-            cmd.Parameters.AddWithValue("$file", filePath);
+            cmd.Parameters.AddWithValue("$file", fileName);
             cmd.Parameters.AddWithValue("$ts",   DateTimeOffset.UtcNow.ToString("O"));
             return (long)(await Task.Run(() => cmd.ExecuteScalar(), ct))!;
         }
@@ -65,7 +64,7 @@ public sealed class BackupStore : IAsyncDisposable
 
     /// <summary>Updates the row with the final outcome.</summary>
     public async Task LogCompleteAsync(
-        long runId, bool succeeded, long? fileSizeBytes, string? errorMessage,
+        long runId, bool succeeded, string? errorMessage,
         CancellationToken ct = default)
     {
         await _lock.WaitAsync(ct);
@@ -74,17 +73,15 @@ public sealed class BackupStore : IAsyncDisposable
             using var cmd = _db.CreateCommand();
             cmd.CommandText = """
                 UPDATE backup_runs
-                SET completed_at    = $ts,
-                    succeeded       = $ok,
-                    file_size_bytes = $size,
-                    error_message   = $err
+                SET completed_at  = $ts,
+                    succeeded     = $ok,
+                    error_message = $err
                 WHERE id = $id;
                 """;
-            cmd.Parameters.AddWithValue("$ts",   DateTimeOffset.UtcNow.ToString("O"));
-            cmd.Parameters.AddWithValue("$ok",   succeeded ? 1 : 0);
-            cmd.Parameters.AddWithValue("$size", fileSizeBytes.HasValue ? (object)fileSizeBytes.Value : DBNull.Value);
-            cmd.Parameters.AddWithValue("$err",  errorMessage ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("$id",   runId);
+            cmd.Parameters.AddWithValue("$ts",  DateTimeOffset.UtcNow.ToString("O"));
+            cmd.Parameters.AddWithValue("$ok",  succeeded ? 1 : 0);
+            cmd.Parameters.AddWithValue("$err", errorMessage ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("$id",  runId);
             await Task.Run(() => cmd.ExecuteNonQuery(), ct);
         }
         finally { _lock.Release(); }
@@ -100,8 +97,8 @@ public sealed class BackupStore : IAsyncDisposable
         {
             using var cmd = _db.CreateCommand();
             cmd.CommandText = """
-                SELECT id, tenant_id, database_name, file_path,
-                       started_at, completed_at, file_size_bytes, succeeded, error_message
+                SELECT id, tenant_id, database_name, file_name,
+                       started_at, completed_at, succeeded, error_message
                 FROM   backup_runs
                 WHERE  tenant_id = $tid AND database_name = $db AND succeeded = 1
                 ORDER  BY completed_at DESC
@@ -114,15 +111,14 @@ public sealed class BackupStore : IAsyncDisposable
                 using var r = cmd.ExecuteReader();
                 if (!r.Read()) return null;
                 return new BackupRun(
-                    Id:            r.GetInt64(0),
-                    TenantId:      r.GetString(1),
-                    DatabaseName:  r.GetString(2),
-                    FilePath:      r.GetString(3),
-                    StartedAt:     DateTimeOffset.Parse(r.GetString(4)),
-                    CompletedAt:   r.IsDBNull(5) ? null : DateTimeOffset.Parse(r.GetString(5)),
-                    FileSizeBytes: r.IsDBNull(6) ? null : r.GetInt64(6),
-                    Succeeded:     r.GetInt32(7) == 1,
-                    ErrorMessage:  r.IsDBNull(8) ? null : r.GetString(8));
+                    Id:           r.GetInt64(0),
+                    TenantId:     r.GetString(1),
+                    DatabaseName: r.GetString(2),
+                    FileName:     r.GetString(3),
+                    StartedAt:    DateTimeOffset.Parse(r.GetString(4)),
+                    CompletedAt:  r.IsDBNull(5) ? null : DateTimeOffset.Parse(r.GetString(5)),
+                    Succeeded:    r.GetInt32(6) == 1,
+                    ErrorMessage: r.IsDBNull(7) ? null : r.GetString(7));
             }, ct);
         }
         finally { _lock.Release(); }
@@ -139,9 +135,8 @@ public sealed record BackupRun(
     long Id,
     string TenantId,
     string DatabaseName,
-    string FilePath,
+    string FileName,
     DateTimeOffset StartedAt,
     DateTimeOffset? CompletedAt,
-    long? FileSizeBytes,
     bool Succeeded,
     string? ErrorMessage);

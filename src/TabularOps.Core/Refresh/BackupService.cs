@@ -3,11 +3,15 @@ using TabularOps.Core.Connection;
 namespace TabularOps.Core.Refresh;
 
 /// <summary>
-/// Backs up a tabular database to an ABF file via TOM and records the run in SQLite.
+/// Backs up a tabular database via TOM and records the run in SQLite.
 ///
-/// Supported on SSAS, AAS, and Power BI XMLA Premium/Fabric endpoints with
-/// the Contribute permission or higher. Read-only XMLA endpoints will throw
-/// OperationException — callers should surface the message to the user.
+/// The server (SSAS, AAS, or Power BI XMLA) determines where the file is
+/// stored based on its own configuration:
+///   - SSAS: server's BackupDirectory property
+///   - AAS / Power BI: Azure Blob Storage container configured on the server
+///
+/// If no storage is configured the server throws OperationException; callers
+/// surface the message to the user.  The client only supplies a file name.
 /// </summary>
 public sealed class BackupService
 {
@@ -21,17 +25,19 @@ public sealed class BackupService
     }
 
     /// <summary>
-    /// Backs up <paramref name="databaseName"/> to <paramref name="filePath"/> (.abf).
-    /// Records the run in SQLite regardless of outcome.
+    /// Backs up <paramref name="databaseName"/> using a timestamped file name.
+    /// The server writes the file to its configured backup storage.
     /// </summary>
     /// <returns>The completed <see cref="BackupRun"/> record.</returns>
     public async Task<BackupRun> BackupAsync(
         string tenantId,
         string databaseName,
-        string filePath,
         CancellationToken ct = default)
     {
-        var runId = await _store.LogStartAsync(tenantId, databaseName, filePath, ct);
+        // File name only — the server resolves the storage location.
+        var fileName = $"{SanitizeFileName(databaseName)}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.abf";
+
+        var runId = await _store.LogStartAsync(tenantId, databaseName, fileName, ct);
 
         try
         {
@@ -48,23 +54,25 @@ public sealed class BackupService
 
                 var backupInfo = new Microsoft.AnalysisServices.BackupInfo
                 {
-                    File            = filePath,
-                    AllowOverwrite  = true,
+                    File             = fileName,
+                    AllowOverwrite   = true,
                     ApplyCompression = true,
                 };
 
                 db.Backup(backupInfo);
             }, ct);
 
-            long? fileSize = File.Exists(filePath) ? new FileInfo(filePath).Length : null;
-            await _store.LogCompleteAsync(runId, succeeded: true, fileSize, errorMessage: null, ct);
+            await _store.LogCompleteAsync(runId, succeeded: true, errorMessage: null, ct);
         }
         catch (Exception ex)
         {
-            await _store.LogCompleteAsync(runId, succeeded: false, null, ex.Message, ct);
+            await _store.LogCompleteAsync(runId, succeeded: false, ex.Message, ct);
             throw;
         }
 
         return (await _store.GetLastBackupAsync(tenantId, databaseName, ct))!;
     }
+
+    private static string SanitizeFileName(string name) =>
+        string.Concat(name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 }

@@ -94,21 +94,19 @@
                             IsEnabled="{Binding CanBackup}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
-                            ToolTip="Backup this model to an ABF file">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="⬛ Backup model" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsBackingUp}" Value="True">
-                                                <Setter Property="Text" Value="⬛ Backing up…" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                            ToolTip="Backup this model to the configured server storage (Azure Blob / OneLake)">
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="⬛ Backup model" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBackingUp}" Value="True">
+                                            <Setter Property="Text" Value="⬛ Backing up…" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Button>
 
                     <!-- Process status -->

@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.AnalysisServices.Tabular;
-using Microsoft.Win32;
 using TabularOps.Core.Connection;
 using TabularOps.Core.Dmv;
 using TabularOps.Core.Model;
@@ -178,20 +177,6 @@ public partial class OverviewViewModel : ObservableObject
     {
         if (_currentModel is null) return;
 
-        // Open SaveFileDialog on the UI thread before going async
-        var dialog = new SaveFileDialog
-        {
-            Title            = "Backup tabular model",
-            Filter           = "Analysis Services Backup (*.abf)|*.abf",
-            DefaultExt       = ".abf",
-            FileName         = $"{_currentModel.DatabaseName}_{DateTime.Now:yyyyMMdd_HHmm}.abf",
-            OverwritePrompt  = true,
-        };
-
-        if (dialog.ShowDialog() != true) return;
-
-        var filePath = dialog.FileName;
-
         IsBackingUp = true;
         ProcessStatus = "Backing up model…";
 
@@ -199,15 +184,15 @@ public partial class OverviewViewModel : ObservableObject
         {
             var run = await _backupService.BackupAsync(
                 _currentModel.TenantId,
-                _currentModel.DatabaseName,
-                filePath);
+                _currentModel.DatabaseName);
 
-            var size = run.FileSizeBytes.HasValue ? $" ({FormatBytes(run.FileSizeBytes.Value)})" : "";
-            ProcessStatus = $"Backup complete{size}";
+            ProcessStatus = $"Backup complete — {run.FileName}";
             LastBackup = run.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
         }
         catch (Exception ex)
         {
+            // Common cause: backup storage not configured on the server/workspace.
+            // Surface the server message directly — it's usually descriptive enough.
             ProcessStatus = $"Backup failed: {ex.Message}";
         }
         finally
