@@ -36,8 +36,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />  <!-- Logo -->
                     <ColumnDefinition Width="16" />
-                    <ColumnDefinition Width="Auto" />  <!-- Tenant indicator -->
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />     <!-- Model tabs (scrollable) -->
                     <ColumnDefinition Width="Auto" />  <!-- Theme toggle -->
                     <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="Auto" />  <!-- Add connection -->
@@ -52,61 +51,74 @@
                            Foreground="{DynamicResource Accent}"
                            VerticalAlignment="Center" />
 
-                <!-- Active tenant pill -->
-                <Border Grid.Column="2"
-                        Background="{DynamicResource Bg3}"
-                        BorderBrush="{DynamicResource Border}"
-                        BorderThickness="1"
-                        CornerRadius="3"
-                        Padding="10,3"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding ActiveTenant, Converter={StaticResource NullToCollapsedConverter}}">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Connection status dot -->
-                        <Ellipse Width="6" Height="6" Margin="0,0,6,0">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="{DynamicResource Success}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ActiveTenant.Status}"
-                                                     Value="{x:Static vm:TenantConnectionStatus.Error}">
-                                            <Setter Property="Fill" Value="{DynamicResource Error}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding ActiveTenant.Status}"
-                                                     Value="{x:Static vm:TenantConnectionStatus.ReadOnly}">
-                                            <Setter Property="Fill" Value="{DynamicResource Warn}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding ActiveTenant.Status}"
-                                                     Value="{x:Static vm:TenantConnectionStatus.Connecting}">
-                                            <Setter Property="Fill" Value="{DynamicResource Text3}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Text="{Binding ActiveTenant.DisplayName}"
-                                   FontFamily="{StaticResource SansFont}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource Text0}"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Text=" · "
-                                   FontFamily="{StaticResource SansFont}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource Text2}"
-                                   VerticalAlignment="Center"
-                                   Visibility="{Binding ActiveModel, Converter={StaticResource NullToCollapsedConverter}}" />
-                        <TextBlock Text="{Binding ActiveModel.DisplayName}"
-                                   FontFamily="{StaticResource MonoFont}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource Text1}"
-                                   VerticalAlignment="Center"
-                                   Visibility="{Binding ActiveModel, Converter={StaticResource NullToCollapsedConverter}}" />
-                    </StackPanel>
-                </Border>
+                <!-- Model tab strip — scrollable, one tab per open model -->
+                <ScrollViewer Grid.Column="2"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              VerticalAlignment="Stretch">
+                    <ItemsControl ItemsSource="{Binding ModelTabs}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ModelTab}">
+                                <Border MinWidth="80" MaxWidth="220"
+                                        Padding="12,0,4,0"
+                                        Cursor="Hand"
+                                        BorderBrush="{DynamicResource Border}"
+                                        BorderThickness="0,0,1,0"
+                                        ToolTip="{Binding WorkspaceName}">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.SwitchModelTabCommand,
+                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      CommandParameter="{Binding}" />
+                                    </Border.InputBindings>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource Bg0}" />
+                                                </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   FontFamily="{StaticResource MonoFont}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource Text1}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="150" />
+                                        <Button Content="✕"
+                                                Style="{StaticResource FlatButton}"
+                                                FontSize="9"
+                                                Foreground="{DynamicResource Text3}"
+                                                BorderThickness="0"
+                                                Padding="4,2"
+                                                Margin="6,0,0,0"
+                                                ToolTip="Close tab"
+                                                Command="{Binding DataContext.CloseModelTabCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
 
                 <!-- Theme toggle -->
                 <Button x:Name="ThemeToggleButton"
-                        Grid.Column="4"
+                        Grid.Column="3"
                         Style="{StaticResource FlatButton}"
                         Click="ThemeToggle_Click"
                         ToolTip="Toggle light / dark theme"
@@ -115,7 +127,7 @@
                         VerticalAlignment="Center" />
 
                 <!-- Add connection button -->
-                <Button Grid.Column="6"
+                <Button Grid.Column="5"
                         Content="+ Connect  Ctrl+N"
                         Style="{StaticResource FlatButton}"
                         Command="{Binding AddConnectionCommand}"
@@ -332,15 +344,26 @@
                                                           Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibleConverter}}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type vm:ModelNodeViewModel}">
+                                                        <!-- Tag carries the Window's DataContext (MainViewModel) for ContextMenu binding -->
                                                         <Border Padding="28,4,8,4"
                                                                 Cursor="Hand"
-                                                                Margin="0">
+                                                                Margin="0"
+                                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                                                             <Border.InputBindings>
                                                                 <MouseBinding MouseAction="LeftClick"
                                                                               Command="{Binding DataContext.SelectModelCommand,
                                                                                         RelativeSource={RelativeSource AncestorType=Window}}"
                                                                               CommandParameter="{Binding}" />
                                                             </Border.InputBindings>
+                                                            <Border.ContextMenu>
+                                                                <ContextMenu>
+                                                                    <MenuItem Header="Open in tab"
+                                                                              Command="{Binding PlacementTarget.Tag.SelectModelCommand,
+                                                                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                              CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                                                 RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                                </ContextMenu>
+                                                            </Border.ContextMenu>
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Background" Value="Transparent" />
@@ -480,12 +503,12 @@
 
                                 <!-- Total model size — only shown once DMV stats are loaded -->
                                 <StackPanel Orientation="Horizontal"
-                                            Visibility="{Binding PartitionMap.TotalModelSize, Converter={StaticResource NullToCollapsedConverter}}">
+                                            Visibility="{Binding ActivePartitionMap.TotalModelSize, Converter={StaticResource NullToCollapsedConverter}}">
                                     <TextBlock Text=" · "
                                                FontFamily="{StaticResource MonoFont}"
                                                FontSize="11"
                                                Foreground="{DynamicResource Text3}" />
-                                    <TextBlock Text="{Binding PartitionMap.TotalModelSize}"
+                                    <TextBlock Text="{Binding ActivePartitionMap.TotalModelSize}"
                                                FontFamily="{StaticResource MonoFont}"
                                                FontSize="11"
                                                Foreground="{DynamicResource Text2}" />
@@ -628,10 +651,10 @@
                          (the parent DataContext), not to the view's own DataContext. -->
                     <Grid Grid.Row="2">
                         <Grid Visibility="{Binding IsOverviewTab, Converter={StaticResource BoolToVisibleConverter}}">
-                            <views:OverviewView DataContext="{Binding Overview}" />
+                            <views:OverviewView DataContext="{Binding ActiveOverview}" />
                         </Grid>
                         <Grid Visibility="{Binding IsPartitionsTab, Converter={StaticResource BoolToVisibleConverter}}">
-                            <views:PartitionMapView DataContext="{Binding PartitionMap}" />
+                            <views:PartitionMapView DataContext="{Binding ActivePartitionMap}" />
                         </Grid>
                         <Grid Visibility="{Binding IsLineageTab, Converter={StaticResource BoolToVisibleConverter}}">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.4">

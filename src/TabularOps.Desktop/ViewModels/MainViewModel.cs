@@ -13,14 +13,19 @@ public partial class MainViewModel : ObservableObject
     private readonly ConnectionStore _connectionStore;
 
     public ObservableCollection<TenantNodeViewModel> Tenants { get; } = [];
+    public ObservableCollection<ModelTab> ModelTabs { get; } = [];
     public StatusBarViewModel StatusBar { get; } = new();
-    public OverviewViewModel Overview { get; }
-    public PartitionMapViewModel PartitionMap { get; }
     public HistoryViewModel History { get; }
     public TraceViewModel Trace { get; }
 
+    /// <summary>Overview VM for the currently active tab (null when no tab is open).</summary>
+    public OverviewViewModel?    ActiveOverview     => ActiveModelTab?.Overview;
+    /// <summary>Partition map VM for the currently active tab (null when no tab is open).</summary>
+    public PartitionMapViewModel? ActivePartitionMap => ActiveModelTab?.PartitionMap;
+
     [ObservableProperty] private TenantNodeViewModel? _activeTenant;
     [ObservableProperty] private ModelNodeViewModel? _activeModel;
+    [ObservableProperty] private ModelTab? _activeModelTab;
     [ObservableProperty] private bool _isRestoring;
     [ObservableProperty] private string _activeTab = "Partitions";
 
@@ -48,7 +53,7 @@ public partial class MainViewModel : ObservableObject
             ? $"{ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}"
             : $"{ActiveTenant?.DisplayName} / {ActiveModel.WorkspaceName} / {ActiveModel.DisplayName}";
 
-    public int PartitionCount => PartitionMap.VisibleTables.Sum(t => t.Partitions.Count);
+    public int PartitionCount => ActiveModelTab?.PartitionMap.VisibleTables.Sum(t => t.Partitions.Count) ?? 0;
 
     public int HistoryCount => History.Runs.Count;
 
@@ -102,17 +107,26 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLineageTab));
         OnPropertyChanged(nameof(TotalModelCount));
         OnPropertyChanged(nameof(HasPowerBiTenants));
+        OnPropertyChanged(nameof(ActiveOverview));
+        OnPropertyChanged(nameof(ActivePartitionMap));
     }
 
     public MainViewModel(ConnectionManager connectionManager, ConnectionStore connectionStore)
     {
         _connectionManager = connectionManager;
-        _connectionStore = connectionStore;
-        Overview = new OverviewViewModel(connectionManager, App.RefreshEngine, App.BackupService, App.BackupStore);
-        PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine, App.PartitionCache);
+        _connectionStore   = connectionStore;
         History = new HistoryViewModel(App.RefreshHistory, connectionManager);
-        Trace = new TraceViewModel(connectionManager);
+        Trace   = new TraceViewModel(connectionManager);
     }
+
+    /// <summary>
+    /// Creates a new ModelTab with its own dedicated Overview and PartitionMap VMs.
+    /// Each tab owns its VMs so loaded state survives switching away and back.
+    /// </summary>
+    private ModelTab CreateTab(ModelNodeViewModel node) => new(
+        node,
+        new OverviewViewModel(_connectionManager, App.RefreshEngine, App.BackupService, App.BackupStore),
+        new PartitionMapViewModel(_connectionManager, App.RefreshEngine, App.PartitionCache));
 
     [RelayCommand]
     private async Task SwitchTab(string tab)
@@ -124,9 +138,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLineageTab));
         OnPropertyChanged(nameof(IsHistoryTab));
 
-        if (tab == "Overview" && ActiveModel is not null)
-            await Overview.LoadAsync(ActiveModel.Model);
-        else
+        // Overview data is owned per-tab and was already loaded when the tab was
+        // first activated — no reload needed when clicking the Overview tab button.
         if (tab == "History")
         {
             UpdateHistoryContext();
@@ -145,6 +158,16 @@ public partial class MainViewModel : ObservableObject
         // Trace intentionally keeps running when switching to other tabs —
         // the user may navigate to Overview or Partitions while monitoring.
         // Trace is stopped only when the active model changes (see OnActiveModelChanged).
+    }
+
+    partial void OnActiveModelTabChanged(ModelTab? value)
+    {
+        // Keep IsActive flags in sync when the tab is changed directly (e.g. closed via null)
+        foreach (var t in ModelTabs) t.IsActive = t == value;
+        // The active tab's VMs replace what the content area binds to
+        OnPropertyChanged(nameof(ActiveOverview));
+        OnPropertyChanged(nameof(ActivePartitionMap));
+        OnPropertyChanged(nameof(PartitionCount));
     }
 
     partial void OnActiveTenantChanged(TenantNodeViewModel? value)
@@ -331,39 +354,112 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectModelAsync(ModelNodeViewModel model)
     {
-        if (ActiveModel is not null)
+        var tab = ModelTabs.FirstOrDefault(t => t.Node == model);
+        if (tab is null)
+        {
+            tab = CreateTab(model);
+            ModelTabs.Add(tab);
+        }
+        await ActivateModelTabAsync(tab);
+    }
+
+    /// <summary>
+    /// Core tab-activation path. Updates sidebar IsActive flags, sets ActiveModel/ActiveTenant,
+    /// and kicks off Overview + PartitionMap loads.
+    /// </summary>
+    private async Task ActivateModelTabAsync(ModelTab tab)
+    {
+        // Sync tab highlight flags
+        foreach (var t in ModelTabs) t.IsActive = false;
+        tab.IsActive = true;
+        ActiveModelTab = tab;
+
+        var node = tab.Node;
+
+        // Update sidebar selection
+        if (ActiveModel is not null && ActiveModel != node)
             ActiveModel.IsActive = false;
+        ActiveModel = node;
+        node.IsActive = true;
 
-        ActiveModel = model;
-        model.IsActive = true;
-
-        var ownerTenant = Tenants.FirstOrDefault(t => t.Models.Contains(model));
+        // Switch tenant context when the model belongs to a different workspace
+        var ownerTenant = Tenants.FirstOrDefault(t => t.Models.Contains(node));
         if (ownerTenant is not null && ownerTenant != ActiveTenant)
         {
             ActiveTenant = ownerTenant;
             await _connectionManager.SetActiveTenantAsync(ownerTenant.TenantId);
         }
 
+        if (ActiveTenant is not null)
+            ActiveTenant.Context.ActiveModel = node.Model;
+
         ActiveTab = "Overview";
         OnPropertyChanged(nameof(IsOverviewTab));
         OnPropertyChanged(nameof(IsPartitionsTab));
-        _ = Overview.LoadAsync(model.Model);
-        _ = PartitionMap.LoadAsync(model.Model);
+        OnPropertyChanged(nameof(IsTraceTab));
+        OnPropertyChanged(nameof(IsLineageTab));
+        OnPropertyChanged(nameof(IsHistoryTab));
+        // Each tab owns its VMs — first activation loads data; subsequent switches
+        // hit the identity guard and return immediately (no network round-trip).
+        _ = tab.Overview.LoadAsync(node.Model);
+        _ = tab.PartitionMap.LoadAsync(node.Model);
+    }
+
+    [RelayCommand]
+    private void SwitchModelTab(ModelTab tab)
+    {
+        if (tab == ActiveModelTab) return;
+        _ = ActivateModelTabAsync(tab);
+    }
+
+    [RelayCommand]
+    private void CloseModelTab(ModelTab tab)
+    {
+        var idx = ModelTabs.IndexOf(tab);
+        ModelTabs.Remove(tab);
+
+        if (tab != ActiveModelTab) return;
+
+        if (ModelTabs.Count == 0)
+        {
+            if (ActiveModel is not null) ActiveModel.IsActive = false;
+            ActiveModel    = null;
+            ActiveModelTab = null;
+        }
+        else
+        {
+            var newIdx = Math.Max(0, Math.Min(idx, ModelTabs.Count - 1));
+            _ = ActivateModelTabAsync(ModelTabs[newIdx]);
+        }
     }
 
     [RelayCommand]
     private async Task RemoveTenant(TenantNodeViewModel tenant)
     {
+        // Close any open tabs for models belonging to this tenant
+        var orphaned = ModelTabs.Where(t => tenant.Models.Contains(t.Node)).ToList();
+        bool activeTabRemoved = ActiveModelTab is not null && orphaned.Contains(ActiveModelTab);
+        foreach (var t in orphaned)
+            ModelTabs.Remove(t);
+
         Tenants.Remove(tenant);
 
         if (ActiveTenant == tenant)
         {
             ActiveTenant = Tenants.FirstOrDefault();
-            ActiveModel = null;
+            if (ActiveModel is not null) ActiveModel.IsActive = false;
+            ActiveModel    = null;
+            ActiveModelTab = null;
         }
         else if (ActiveModel is not null && tenant.Models.Contains(ActiveModel))
         {
-            ActiveModel = null;
+            if (ActiveModel is not null) ActiveModel.IsActive = false;
+            ActiveModel    = null;
+            ActiveModelTab = null;
+        }
+        else if (activeTabRemoved && ModelTabs.Count > 0)
+        {
+            _ = ActivateModelTabAsync(ModelTabs[0]);
         }
 
         // Always refresh derived counts — RaiseActiveContextChanged is only called

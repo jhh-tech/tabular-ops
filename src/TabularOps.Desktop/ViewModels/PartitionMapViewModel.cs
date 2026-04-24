@@ -209,8 +209,17 @@ public partial class PartitionMapViewModel : ObservableObject
     // Loading
     // -------------------------------------------------------------------------
 
-    public async Task LoadAsync(ModelRef model, CancellationToken ct = default)
+    public async Task LoadAsync(ModelRef model, bool force = false, CancellationToken ct = default)
     {
+        // Skip reload when this model is already displayed — avoids the slow DMV
+        // round-trip when the user flips back to a tab they already had open.
+        if (!force
+            && _currentModel is not null
+            && _currentModel.TenantId   == model.TenantId
+            && _currentModel.DatabaseId == model.DatabaseId
+            && !IsLoading)
+            return;
+
         _currentModel = model;
         ModelLabel = model.DatabaseName;
         ErrorMessage = null;
@@ -391,7 +400,7 @@ public partial class PartitionMapViewModel : ObservableObject
         }
 
         if (_currentModel is not null)
-            await LoadAsync(_currentModel, ct);
+            await LoadAsync(_currentModel, force: true, ct);
     }
 
     private bool CanRefreshSelected() => _selectedKeys.Count > 0 && !IsRefreshing && !IsLoading;
@@ -429,7 +438,7 @@ public partial class PartitionMapViewModel : ObservableObject
     private async Task Reload()
     {
         if (_currentModel is null) return;
-        await LoadAsync(_currentModel);
+        await LoadAsync(_currentModel, force: true);
     }
 
     partial void OnActiveFilterChanged(PartitionFilter value)

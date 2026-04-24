@@ -60,8 +60,17 @@ public partial class OverviewViewModel : ObservableObject
         _backupStore       = backupStore;
     }
 
-    public async Task LoadAsync(ModelRef model, CancellationToken ct = default)
+    public async Task LoadAsync(ModelRef model, bool force = false, CancellationToken ct = default)
     {
+        // Skip reload if this model is already shown — saves the round-trip when the
+        // user switches back to a tab they already had open.
+        if (!force
+            && _currentModel is not null
+            && _currentModel.TenantId   == model.TenantId
+            && _currentModel.DatabaseId == model.DatabaseId
+            && !IsLoading)
+            return;
+
         _currentModel = model;
         IsLoading = true;
         ErrorMessage = null;
@@ -162,7 +171,7 @@ public partial class OverviewViewModel : ObservableObject
 
             var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
             ProcessStatus = $"Process completed ({option.DisplayName}) — {elapsed}";
-            await LoadAsync(_currentModel);
+            await LoadAsync(_currentModel, force: true);
         }
         catch (OperationCanceledException)
         {
