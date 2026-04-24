@@ -121,6 +121,27 @@ public static class DmvQueries
             kv => new PartitionStorageInfo(kv.Key, kv.Key, kv.Value.MaxRows, kv.Value.TotalSize));
     }
 
+    /// <summary>
+    /// Returns total memory usage in bytes for the database from DISCOVER_MEMORY_USAGE.
+    /// Returns null if the DMV is not supported (e.g. Power BI XMLA endpoints).
+    /// </summary>
+    public static async Task<long?> GetDatabaseMemoryUsageAsync(
+        ConnectionManager connectionManager,
+        string tenantId,
+        string databaseName,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            const string q = "SELECT SUM(OBJECT_MEMORY_DBMS) AS TotalMemoryBytes FROM $SYSTEM.DISCOVER_MEMORY_USAGE";
+            var rows = await connectionManager.ExecuteDmvAsync(tenantId, q, ct, catalogName: databaseName);
+            if (rows.Count > 0 && rows[0].TryGetValue("TotalMemoryBytes", out var val) && val is not null)
+                return Convert.ToInt64(val);
+        }
+        catch { /* DMV not supported on this endpoint */ }
+        return null;
+    }
+
     private static string? TryGetString(Dictionary<string, object?> row, string column)
     {
         if (!row.TryGetValue(column, out var val) || val is null) return null;

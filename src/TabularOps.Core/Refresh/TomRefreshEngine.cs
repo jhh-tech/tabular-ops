@@ -125,6 +125,28 @@ public sealed class TomRefreshEngine
         return runs;
     }
 
+    /// <summary>
+    /// Refreshes the entire model in one TOM call — equivalent to "Process Database" in SSMS.
+    /// Faster and simpler than enumerating partitions when all partitions need refreshing.
+    /// </summary>
+    public async Task RefreshModelAsync(
+        string tenantId,
+        string databaseName,
+        RefreshMode mode = RefreshMode.Automatic,
+        CancellationToken ct = default)
+    {
+        var server = await _connectionManager.GetOrCreateCatalogServerAsync(tenantId, databaseName, ct);
+
+        var db = server.Databases.Cast<Microsoft.AnalysisServices.Database>()
+                     .FirstOrDefault(d => d.Name == databaseName)
+                 ?? throw new InvalidOperationException(
+                     $"Database '{databaseName}' not found on the server.");
+
+        db.Model.RequestRefresh(ToTomRefreshType(mode));
+        await Task.Run(() => db.Model.SaveChanges(), ct);
+        await Task.Run(() => db.Refresh(), ct);
+    }
+
     private static RefreshType ToTomRefreshType(RefreshMode mode) => mode switch
     {
         RefreshMode.Full        => RefreshType.Full,

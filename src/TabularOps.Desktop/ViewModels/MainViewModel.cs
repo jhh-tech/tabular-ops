@@ -14,6 +14,7 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<TenantNodeViewModel> Tenants { get; } = [];
     public StatusBarViewModel StatusBar { get; } = new();
+    public OverviewViewModel Overview { get; }
     public PartitionMapViewModel PartitionMap { get; }
     public HistoryViewModel History { get; }
     public TraceViewModel Trace { get; }
@@ -23,6 +24,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isRestoring;
     [ObservableProperty] private string _activeTab = "Partitions";
 
+    public bool IsOverviewTab   => ActiveTab == "Overview";
     public bool IsPartitionsTab => ActiveTab == "Partitions";
     public bool IsHistoryTab    => ActiveTab == "History";
     public bool IsTraceTab      => ActiveTab == "Trace";
@@ -95,6 +97,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(PartitionCount));
         OnPropertyChanged(nameof(HistoryCount));
         OnPropertyChanged(nameof(IsTraceRunning));
+        OnPropertyChanged(nameof(IsOverviewTab));
         OnPropertyChanged(nameof(TotalModelCount));
         OnPropertyChanged(nameof(HasPowerBiTenants));
     }
@@ -103,6 +106,7 @@ public partial class MainViewModel : ObservableObject
     {
         _connectionManager = connectionManager;
         _connectionStore = connectionStore;
+        Overview = new OverviewViewModel(connectionManager, App.RefreshEngine);
         PartitionMap = new PartitionMapViewModel(connectionManager, App.RefreshEngine, App.PartitionCache);
         History = new HistoryViewModel(App.RefreshHistory, connectionManager);
         Trace = new TraceViewModel(connectionManager);
@@ -112,10 +116,14 @@ public partial class MainViewModel : ObservableObject
     private async Task SwitchTab(string tab)
     {
         ActiveTab = tab;
+        OnPropertyChanged(nameof(IsOverviewTab));
         OnPropertyChanged(nameof(IsPartitionsTab));
         OnPropertyChanged(nameof(IsHistoryTab));
         OnPropertyChanged(nameof(IsTraceTab));
 
+        if (tab == "Overview" && ActiveModel is not null)
+            await Overview.LoadAsync(ActiveModel.Model);
+        else
         if (tab == "History")
         {
             UpdateHistoryContext();
@@ -328,6 +336,10 @@ public partial class MainViewModel : ObservableObject
             await _connectionManager.SetActiveTenantAsync(ownerTenant.TenantId);
         }
 
+        ActiveTab = "Overview";
+        OnPropertyChanged(nameof(IsOverviewTab));
+        OnPropertyChanged(nameof(IsPartitionsTab));
+        _ = Overview.LoadAsync(model.Model);
         _ = PartitionMap.LoadAsync(model.Model);
     }
 

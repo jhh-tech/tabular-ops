@@ -302,6 +302,7 @@ public partial class PartitionMapViewModel : ObservableObject
 
         OnPropertyChanged(nameof(SelectedCount));
         RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -321,6 +322,7 @@ public partial class PartitionMapViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(SelectedCount));
         RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -332,6 +334,7 @@ public partial class PartitionMapViewModel : ObservableObject
                 cell.IsSelected = false;
         OnPropertyChanged(nameof(SelectedCount));
         RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
     }
 
     // -------------------------------------------------------------------------
@@ -339,13 +342,24 @@ public partial class PartitionMapViewModel : ObservableObject
     // -------------------------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanRefreshSelected))]
-    private async Task RefreshSelected(CancellationToken ct)
+    private Task RefreshSelected(CancellationToken ct) =>
+        ExecuteRefreshAsync(SelectedRefreshType, ct);
+
+    /// <summary>
+    /// Called from the selection tray buttons — sets the mode and triggers refresh.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRefreshSelected))]
+    private Task RefreshWithMode(RefreshTypeOption option) =>
+        ExecuteRefreshAsync(option, CancellationToken.None);
+
+    private async Task ExecuteRefreshAsync(RefreshTypeOption option, CancellationToken ct)
     {
         if (_currentModel is null || _selectedKeys.Count == 0) return;
 
-        // Show confirmation dialog if one is wired up
+        SelectedRefreshType = option;
+
         var partitionList = _selectedKeys.ToList();
-        if (ConfirmRefresh is not null && !ConfirmRefresh(partitionList, SelectedRefreshType.DisplayName))
+        if (ConfirmRefresh is not null && !ConfirmRefresh(partitionList, option.DisplayName))
             return;
 
         IsRefreshing = true;
@@ -357,7 +371,7 @@ public partial class PartitionMapViewModel : ObservableObject
                 _currentModel.TenantId,
                 _currentModel.DatabaseName,
                 partitionList,
-                mode: SelectedRefreshType.Mode,
+                mode: option.Mode,
                 progress: null,
                 ct);
 
@@ -376,16 +390,29 @@ public partial class PartitionMapViewModel : ObservableObject
             IsRefreshing = false;
         }
 
-        // Reload partition data to reflect new state
         if (_currentModel is not null)
             await LoadAsync(_currentModel, ct);
     }
 
     private bool CanRefreshSelected() => _selectedKeys.Count > 0 && !IsRefreshing && !IsLoading;
 
-    partial void OnIsRefreshingChanged(bool value)          => RefreshSelectedCommand.NotifyCanExecuteChanged();
-    partial void OnIsLoadingChanged(bool value)             => RefreshSelectedCommand.NotifyCanExecuteChanged();
-    partial void OnIsBackgroundRefreshingChanged(bool value) => RefreshSelectedCommand.NotifyCanExecuteChanged();
+    partial void OnIsRefreshingChanged(bool value)
+    {
+        RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsBackgroundRefreshingChanged(bool value)
+    {
+        RefreshSelectedCommand.NotifyCanExecuteChanged();
+        RefreshWithModeCommand.NotifyCanExecuteChanged();
+    }
 
     // -------------------------------------------------------------------------
     // Filter
