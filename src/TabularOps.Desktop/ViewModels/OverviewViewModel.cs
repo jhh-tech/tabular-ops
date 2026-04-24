@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.AnalysisServices.Tabular;
@@ -15,6 +16,10 @@ public partial class OverviewViewModel : ObservableObject
     private readonly BackupService _backupService;
     private readonly BackupStore _backupStore;
     private ModelRef? _currentModel;
+
+    private DispatcherTimer? _progressTimer;
+    private DateTimeOffset _operationStarted;
+    private string _operationBaseMessage = "";
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isProcessing;
@@ -38,6 +43,7 @@ public partial class OverviewViewModel : ObservableObject
     /// <summary>True when this is a Power BI workspace on a named capacity.</summary>
     public bool HasCapacityInfo => CapacitySku is not null;
 
+    public bool IsBusy     => IsProcessing || IsBackingUp;
     public bool CanProcess => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
     public bool CanBackup  => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
 
@@ -143,7 +149,7 @@ public partial class OverviewViewModel : ObservableObject
         if (_currentModel is null || option is null) return;
 
         IsProcessing = true;
-        ProcessStatus = $"Processing model ({option.DisplayName})…";
+        StartProgressTimer($"Processing ({option.DisplayName})");
 
         try
         {
@@ -152,7 +158,8 @@ public partial class OverviewViewModel : ObservableObject
                 _currentModel.DatabaseName,
                 option.Mode);
 
-            ProcessStatus = $"Process completed ({option.DisplayName})";
+            var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
+            ProcessStatus = $"Process completed ({option.DisplayName}) — {elapsed}";
             await LoadAsync(_currentModel);
         }
         catch (OperationCanceledException)
@@ -165,6 +172,7 @@ public partial class OverviewViewModel : ObservableObject
         }
         finally
         {
+            StopProgressTimer();
             IsProcessing = false;
             NotifyCanExecuteChanged();
         }
@@ -178,7 +186,7 @@ public partial class OverviewViewModel : ObservableObject
         if (_currentModel is null) return;
 
         IsBackingUp = true;
-        ProcessStatus = "Backing up model…";
+        StartProgressTimer("Backing up");
 
         try
         {
@@ -186,7 +194,8 @@ public partial class OverviewViewModel : ObservableObject
                 _currentModel.TenantId,
                 _currentModel.DatabaseName);
 
-            ProcessStatus = $"Backup complete — {run.FileName}";
+            var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
+            ProcessStatus = $"Backup complete — {run.FileName} ({elapsed})";
             LastBackup = run.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
         }
         catch (Exception ex)
@@ -198,6 +207,7 @@ public partial class OverviewViewModel : ObservableObject
         }
         finally
         {
+            StopProgressTimer();
             IsBackingUp = false;
             NotifyCanExecuteChanged();
         }
@@ -211,11 +221,43 @@ public partial class OverviewViewModel : ObservableObject
         BackupModelCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanProcess));
         OnPropertyChanged(nameof(CanBackup));
+        OnPropertyChanged(nameof(IsBusy));
     }
 
     partial void OnIsProcessingChanged(bool value) => NotifyCanExecuteChanged();
     partial void OnIsLoadingChanged(bool value)    => NotifyCanExecuteChanged();
     partial void OnIsBackingUpChanged(bool value)  => NotifyCanExecuteChanged();
+
+    private void StartProgressTimer(string baseMessage)
+    {
+        _operationBaseMessage = baseMessage;
+        _operationStarted     = DateTimeOffset.UtcNow;
+        ProcessStatus         = $"{baseMessage}…";
+
+        _progressTimer?.Stop();
+        _progressTimer = new DispatcherTimer(
+            TimeSpan.FromSeconds(1),
+            DispatcherPriority.Background,
+            OnProgressTimerTick,
+            System.Windows.Application.Current.Dispatcher);
+    }
+
+    private void OnProgressTimerTick(object? sender, EventArgs e)
+    {
+        var elapsed = DateTimeOffset.UtcNow - _operationStarted;
+        ProcessStatus = $"{_operationBaseMessage}… {FormatElapsed(elapsed)}";
+    }
+
+    private void StopProgressTimer()
+    {
+        _progressTimer?.Stop();
+        _progressTimer = null;
+    }
+
+    private static string FormatElapsed(TimeSpan t) =>
+        t.TotalMinutes >= 1
+            ? $"{(int)t.TotalMinutes}m {t.Seconds}s"
+            : $"{(int)t.TotalSeconds}s";
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

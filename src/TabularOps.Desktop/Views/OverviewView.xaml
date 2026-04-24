@@ -11,6 +11,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="38" />
+            <!-- 2px progress bar — collapsed when idle -->
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -131,8 +133,17 @@
             </Grid>
         </Border>
 
+        <!-- ── Operation progress bar (indeterminate, 2px) ── -->
+        <ProgressBar Grid.Row="1"
+                     Height="2"
+                     IsIndeterminate="True"
+                     Foreground="{DynamicResource Accent}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibleConverter}}" />
+
         <!-- ── Content ── -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <Grid>
                 <!-- Loading -->
                 <TextBlock Text="Loading…"

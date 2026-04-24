@@ -139,10 +139,9 @@ public partial class MainViewModel : ObservableObject
             if (!Trace.IsRunning)
                 await Trace.StartTraceAsync();
         }
-        else if (Trace.IsRunning)
-        {
-            await Trace.StopTraceAsync();
-        }
+        // Trace intentionally keeps running when switching to other tabs —
+        // the user may navigate to Overview or Partitions while monitoring.
+        // Trace is stopped only when the active model changes (see OnActiveModelChanged).
     }
 
     partial void OnActiveTenantChanged(TenantNodeViewModel? value)
@@ -154,6 +153,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnActiveModelChanged(ModelNodeViewModel? value)
     {
         RaiseActiveContextChanged();
+
+        // Stop the trace when the user switches to a different model — the old
+        // subscription is for the previous model's server context.
+        if (Trace.IsRunning)
+            _ = Trace.StopTraceAsync();
+
         if (ActiveTenant is null || value is null) return;
         ActiveTenant.Context.ActiveModel = value.Model;
 
