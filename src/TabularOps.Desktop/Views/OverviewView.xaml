@@ -88,13 +88,14 @@
                     <!-- Separator -->
                     <Border Width="1" Height="18" Background="{DynamicResource Border}" Margin="8,0" VerticalAlignment="Center" />
 
-                    <!-- Backup -->
+                    <!-- Backup — not yet implemented (Milestone 7+) -->
                     <Button Content="⬛ Backup model"
                             Style="{StaticResource FlatButton}"
                             Command="{Binding BackupModelCommand}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
-                            ToolTip="Backup this tabular model to an ABF file" />
+                            IsEnabled="False"
+                            ToolTip="Coming soon — backup this model to an ABF file" />
 
                     <!-- Process status -->
                     <TextBlock Text="{Binding ProcessStatus}"

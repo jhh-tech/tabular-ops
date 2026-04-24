@@ -71,27 +71,33 @@
                     <Border Width="1" Height="18" Background="{DynamicResource Border}"
                             Margin="8,0" VerticalAlignment="Center" />
 
-                    <!-- Merge -->
+                    <!-- Merge — not yet implemented -->
                     <Button Content="⊞ Merge"
                             Style="{StaticResource FlatButton}"
                             Command="{Binding MergePartitionsCommand}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
+                            IsEnabled="False"
+                            ToolTip="Coming soon — merge selected partitions"
                             Margin="0,0,4,0" />
 
-                    <!-- New partition -->
+                    <!-- New partition — not yet implemented -->
                     <Button Content="+ New partition"
                             Style="{StaticResource FlatButton}"
                             Command="{Binding NewPartitionCommand}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
+                            IsEnabled="False"
+                            ToolTip="Coming soon — add a new partition to this table"
                             Margin="0,0,4,0" />
 
-                    <!-- Drop -->
+                    <!-- Drop — not yet implemented -->
                     <Button Style="{StaticResource DangerButton}"
                             Command="{Binding DropPartitionsCommand}"
                             FontFamily="{StaticResource MonoFont}"
-                            FontSize="11">
+                            FontSize="11"
+                            IsEnabled="False"
+                            ToolTip="Coming soon — permanently drop selected partitions">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="×"
                                        Foreground="{DynamicResource Error}"
