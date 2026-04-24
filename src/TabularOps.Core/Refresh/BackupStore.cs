@@ -37,6 +37,16 @@ public sealed class BackupStore : IAsyncDisposable
                 ON backup_runs(tenant_id, database_name, started_at DESC);
             """;
         cmd.ExecuteNonQuery();
+
+        // Migrate: earlier schema used file_path; rename to file_name.
+        // SQLite 3.25+ supports RENAME COLUMN — Microsoft.Data.Sqlite bundles 3.43+.
+        try
+        {
+            using var migrate = _db.CreateCommand();
+            migrate.CommandText = "ALTER TABLE backup_runs RENAME COLUMN file_path TO file_name;";
+            migrate.ExecuteNonQuery();
+        }
+        catch { /* column was already renamed or never existed — safe to ignore */ }
     }
 
     /// <summary>Inserts a row before the backup starts and returns its id.</summary>
