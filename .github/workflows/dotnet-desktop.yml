@@ -3,6 +3,7 @@ name: .NET Core Desktop
 on:
   push:
     branches: [ "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "master" ]
 
@@ -49,12 +50,11 @@ jobs:
         Configuration: ${{ matrix.configuration }}
 
     - name: Publish
-      if: matrix.configuration == 'Release'
+      if: startsWith(github.ref, 'refs/tags/')
       run: dotnet publish $env:Desktop_Project_Path --configuration Release --runtime win-x64 --self-contained false --output publish\
-      
-    - name: Upload build artifacts
-      if: matrix.configuration == 'Release'
-      uses: actions/upload-artifact@v4
+
+    - name: Attach to release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
       with:
-        name: TabularOps-Desktop
-        path: publish\
+        files: publish\**
