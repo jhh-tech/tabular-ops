@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.AnalysisServices.Tabular;
@@ -12,10 +13,17 @@ public partial class OverviewViewModel : ObservableObject
 {
     private readonly ConnectionManager _connectionManager;
     private readonly TomRefreshEngine _refreshEngine;
+    private readonly BackupService _backupService;
+    private readonly BackupStore _backupStore;
     private ModelRef? _currentModel;
+
+    private DispatcherTimer? _progressTimer;
+    private DateTimeOffset _operationStarted;
+    private string _operationBaseMessage = "";
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isProcessing;
+    [ObservableProperty] private bool _isBackingUp;
     [ObservableProperty] private string _modelName = "—";
     [ObservableProperty] private string _endpointType = "—";
     [ObservableProperty] private string _compatibilityLevel = "—";
@@ -31,22 +39,43 @@ public partial class OverviewViewModel : ObservableObject
     [ObservableProperty] private string? _capacityRegion;
     [ObservableProperty] private string? _processStatus;
     [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private bool _isProcessPopupOpen;
 
     /// <summary>True when this is a Power BI workspace on a named capacity.</summary>
     public bool HasCapacityInfo => CapacitySku is not null;
 
-    public OverviewViewModel(ConnectionManager connectionManager, TomRefreshEngine refreshEngine)
+    public bool IsBusy     => IsProcessing || IsBackingUp;
+    public bool CanProcess => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
+    public bool CanBackup  => _currentModel is not null && !IsProcessing && !IsLoading && !IsBackingUp;
+
+    public OverviewViewModel(
+        ConnectionManager connectionManager,
+        TomRefreshEngine refreshEngine,
+        BackupService backupService,
+        BackupStore backupStore)
     {
         _connectionManager = connectionManager;
-        _refreshEngine = refreshEngine;
+        _refreshEngine     = refreshEngine;
+        _backupService     = backupService;
+        _backupStore       = backupStore;
     }
 
-    public async Task LoadAsync(ModelRef model, CancellationToken ct = default)
+    public async Task LoadAsync(ModelRef model, bool force = false, CancellationToken ct = default)
     {
+        // Skip reload if this model is already shown — saves the round-trip when the
+        // user switches back to a tab they already had open.
+        if (!force
+            && _currentModel is not null
+            && _currentModel.TenantId   == model.TenantId
+            && _currentModel.DatabaseId == model.DatabaseId
+            && !IsLoading)
+            return;
+
         _currentModel = model;
         IsLoading = true;
         ErrorMessage = null;
         ProcessStatus = null;
+        NotifyCanExecuteChanged();
 
         try
         {
@@ -88,6 +117,10 @@ public partial class OverviewViewModel : ObservableObject
             CapacityRegion = ctx?.CapacityRegion;
             OnPropertyChanged(nameof(HasCapacityInfo));
 
+            // ── SQLite: last successful backup ────────────────────────────────
+            var lastRun = await _backupStore.GetLastBackupAsync(model.TenantId, model.DatabaseName, ct);
+            LastBackup = lastRun?.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
+
             // ── DMV: compressed storage size + total row count ────────────────
             try
             {
@@ -106,10 +139,6 @@ public partial class OverviewViewModel : ObservableObject
                 MemoryUsage = memBytes.HasValue ? FormatBytes(memBytes.Value) : "—";
             }
             catch { MemoryUsage = "—"; }
-
-            // ── Last backup: tracked in SQLite once backup is implemented ─────
-            // TODO: query backup history store when implemented
-            LastBackup = "—";
         }
         catch (Exception ex)
         {
@@ -118,6 +147,7 @@ public partial class OverviewViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            NotifyCanExecuteChanged();
         }
     }
 
@@ -128,8 +158,9 @@ public partial class OverviewViewModel : ObservableObject
     {
         if (_currentModel is null || option is null) return;
 
+        IsProcessPopupOpen = false;   // dismiss dropdown immediately
         IsProcessing = true;
-        ProcessStatus = $"Processing model ({option.DisplayName})…";
+        StartProgressTimer($"Processing ({option.DisplayName})");
 
         try
         {
@@ -138,8 +169,9 @@ public partial class OverviewViewModel : ObservableObject
                 _currentModel.DatabaseName,
                 option.Mode);
 
-            ProcessStatus = $"Process completed ({option.DisplayName})";
-            await LoadAsync(_currentModel);
+            var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
+            ProcessStatus = $"Process completed ({option.DisplayName}) — {elapsed}";
+            await LoadAsync(_currentModel, force: true);
         }
         catch (OperationCanceledException)
         {
@@ -147,37 +179,109 @@ public partial class OverviewViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ProcessStatus = $"Failed: {ex.Message}";
+            ProcessStatus = $"Failed: {TrimXmlaError(ex.Message)}";
         }
         finally
         {
+            StopProgressTimer();
             IsProcessing = false;
+            NotifyCanExecuteChanged();
         }
-    }
-
-    public bool CanProcess => _currentModel is not null && !IsProcessing && !IsLoading;
-
-    partial void OnIsProcessingChanged(bool value)
-    {
-        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(CanProcess));
-    }
-
-    partial void OnIsLoadingChanged(bool value)
-    {
-        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(CanProcess));
     }
 
     // ── Backup ────────────────────────────────────────────────────────────────
 
-    [RelayCommand]
-    private void BackupModel()
+    [RelayCommand(CanExecute = nameof(CanBackup))]
+    private async Task BackupModel()
     {
-        // TODO Milestone 7+: open SaveFileDialog, call TOM Database.Backup(), record date in SQLite
+        if (_currentModel is null) return;
+
+        IsBackingUp = true;
+        StartProgressTimer("Backing up");
+
+        try
+        {
+            var run = await _backupService.BackupAsync(
+                _currentModel.TenantId,
+                _currentModel.DatabaseName);
+
+            var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
+            ProcessStatus = $"Backup complete — {run.FileName} ({elapsed})";
+            LastBackup = run.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—";
+        }
+        catch (Exception ex)
+        {
+            // Common cause: backup storage not configured on the server/workspace.
+            // XMLA errors append " Technical Details: RootActivityId: <guid> Date (UTC): ..."
+            // which is noise — strip it and show only the human-readable sentence.
+            ProcessStatus = $"Backup failed: {TrimXmlaError(ex.Message)}";
+        }
+        finally
+        {
+            StopProgressTimer();
+            IsBackingUp = false;
+            NotifyCanExecuteChanged();
+        }
     }
 
+    // ── Plumbing ──────────────────────────────────────────────────────────────
+
+    private void NotifyCanExecuteChanged()
+    {
+        ProcessModelWithModeCommand.NotifyCanExecuteChanged();
+        BackupModelCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanProcess));
+        OnPropertyChanged(nameof(CanBackup));
+        OnPropertyChanged(nameof(IsBusy));
+    }
+
+    partial void OnIsProcessingChanged(bool value) => NotifyCanExecuteChanged();
+    partial void OnIsLoadingChanged(bool value)    => NotifyCanExecuteChanged();
+    partial void OnIsBackingUpChanged(bool value)  => NotifyCanExecuteChanged();
+
+    private void StartProgressTimer(string baseMessage)
+    {
+        _operationBaseMessage = baseMessage;
+        _operationStarted     = DateTimeOffset.UtcNow;
+        ProcessStatus         = $"{baseMessage}…";
+
+        _progressTimer?.Stop();
+        _progressTimer = new DispatcherTimer(
+            TimeSpan.FromSeconds(1),
+            DispatcherPriority.Background,
+            OnProgressTimerTick,
+            System.Windows.Application.Current.Dispatcher);
+    }
+
+    private void OnProgressTimerTick(object? sender, EventArgs e)
+    {
+        var elapsed = DateTimeOffset.UtcNow - _operationStarted;
+        ProcessStatus = $"{_operationBaseMessage}… {FormatElapsed(elapsed)}";
+    }
+
+    private void StopProgressTimer()
+    {
+        _progressTimer?.Stop();
+        _progressTimer = null;
+    }
+
+    private static string FormatElapsed(TimeSpan t) =>
+        t.TotalMinutes >= 1
+            ? $"{(int)t.TotalMinutes}m {t.Seconds}s"
+            : $"{(int)t.TotalSeconds}s";
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Power BI / AAS XMLA errors append " Technical Details: RootActivityId: &lt;guid&gt;
+    /// Date (UTC): ..." after the human-readable message. Strip everything from
+    /// "Technical Details:" onward so the status bar stays readable.
+    /// </summary>
+    private static string TrimXmlaError(string message)
+    {
+        var cut = message.IndexOf("Technical Details:", StringComparison.OrdinalIgnoreCase);
+        return cut > 0 ? message[..cut].Trim().TrimEnd('.', ',', ' ') : message;
+    }
 
     private static string FormatBytes(long b) => b switch
     {

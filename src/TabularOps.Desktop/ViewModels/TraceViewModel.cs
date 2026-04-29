@@ -83,7 +83,7 @@ public partial class TraceViewModel : ObservableObject
             _readCts = new CancellationTokenSource();
             _ = ReadTraceEventsAsync(_readCts.Token);
 
-            StatusMessage = "Trace running";
+            StatusMessage = "Trace running — events appear when the server emits them (may take a few seconds after an operation starts)";
         }
         catch (Exception ex)
         {

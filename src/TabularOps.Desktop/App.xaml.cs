@@ -16,6 +16,8 @@ public partial class App : Application
     public static RefreshHistoryStore RefreshHistory { get; private set; } = null!;
     public static TomRefreshEngine RefreshEngine { get; private set; } = null!;
     public static PartitionCacheStore PartitionCache { get; private set; } = null!;
+    public static BackupStore BackupStore { get; private set; } = null!;
+    public static BackupService BackupService { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -42,6 +44,8 @@ public partial class App : Application
         RefreshHistory = new RefreshHistoryStore(Path.Combine(appDataDir, "refresh-history.db"));
         RefreshEngine = new TomRefreshEngine(ConnectionManager, RefreshHistory);
         PartitionCache = new PartitionCacheStore(Path.Combine(appDataDir, "partition-cache.db"));
+        BackupStore = new BackupStore(Path.Combine(appDataDir, "backup-history.db"));
+        BackupService = new BackupService(ConnectionManager, BackupStore);
 
         // Ensure interactive token acquisition always runs on the UI thread with the
         // main window handle — required for Windows broker (WAM) on Windows 10/11.
@@ -64,6 +68,7 @@ public partial class App : Application
     {
         await ConnectionManager.DisposeAsync();
         await RefreshHistory.DisposeAsync();
+        await BackupStore.DisposeAsync();
         base.OnExit(e);
     }
 }

@@ -11,6 +11,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="38" />
+            <!-- 2px progress bar — collapsed when idle -->
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -28,6 +30,7 @@
                                   FontFamily="{StaticResource MonoFont}"
                                   FontSize="11"
                                   IsEnabled="{Binding CanProcess}"
+                                  IsChecked="{Binding IsProcessPopupOpen, Mode=TwoWay}"
                                   Padding="8,4">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⟳ Process model" VerticalAlignment="Center" />
@@ -35,7 +38,7 @@
                         </StackPanel>
                     </ToggleButton>
 
-                    <Popup IsOpen="{Binding IsChecked, ElementName=ProcessToggle}"
+                    <Popup IsOpen="{Binding IsProcessPopupOpen, Mode=TwoWay}"
                            PlacementTarget="{Binding ElementName=ProcessToggle}"
                            Placement="Bottom"
                            StaysOpen="False"
@@ -88,14 +91,26 @@
                     <!-- Separator -->
                     <Border Width="1" Height="18" Background="{DynamicResource Border}" Margin="8,0" VerticalAlignment="Center" />
 
-                    <!-- Backup — not yet implemented (Milestone 7+) -->
-                    <Button Content="⬛ Backup model"
-                            Style="{StaticResource FlatButton}"
+                    <!-- Backup -->
+                    <Button Style="{StaticResource FlatButton}"
                             Command="{Binding BackupModelCommand}"
+                            IsEnabled="{Binding CanBackup}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
-                            IsEnabled="False"
-                            ToolTip="Coming soon — backup this model to an ABF file" />
+                            ToolTip="Backup this model to the configured server storage (Azure Blob / OneLake)">
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="⬛ Backup model" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBackingUp}" Value="True">
+                                            <Setter Property="Text" Value="⬛ Backing up…" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Button>
 
                     <!-- Process status -->
                     <TextBlock Text="{Binding ProcessStatus}"
@@ -119,8 +134,17 @@
             </Grid>
         </Border>
 
+        <!-- ── Operation progress bar (indeterminate, 2px) ── -->
+        <ProgressBar Grid.Row="1"
+                     Height="2"
+                     IsIndeterminate="True"
+                     Foreground="{DynamicResource Accent}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibleConverter}}" />
+
         <!-- ── Content ── -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <Grid>
                 <!-- Loading -->
                 <TextBlock Text="Loading…"
