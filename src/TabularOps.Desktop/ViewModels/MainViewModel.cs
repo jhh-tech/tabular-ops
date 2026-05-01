@@ -351,8 +351,45 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Left-click handler: opens the model in the current active tab (replacing it).
+    /// If the model already has its own tab, switches to that tab.
+    /// If no tab is open yet, creates the first tab.
+    /// </summary>
     [RelayCommand]
     private async Task SelectModelAsync(ModelNodeViewModel model)
+    {
+        // Already open in some tab — just focus it
+        var existing = ModelTabs.FirstOrDefault(t => t.Node == model);
+        if (existing is not null)
+        {
+            await ActivateModelTabAsync(existing);
+            return;
+        }
+
+        if (ActiveModelTab is not null)
+        {
+            // Replace the current tab in-place with fresh VMs for the new model
+            var idx    = ModelTabs.IndexOf(ActiveModelTab);
+            var newTab = CreateTab(model);
+            ModelTabs[idx] = newTab;
+            await ActivateModelTabAsync(newTab);
+        }
+        else
+        {
+            // No tab open yet — create the first one
+            var tab = CreateTab(model);
+            ModelTabs.Add(tab);
+            await ActivateModelTabAsync(tab);
+        }
+    }
+
+    /// <summary>
+    /// Right-click "Open in new tab": always opens the model in a dedicated tab,
+    /// creating one if it doesn't already exist.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenModelInNewTab(ModelNodeViewModel model)
     {
         var tab = ModelTabs.FirstOrDefault(t => t.Node == model);
         if (tab is null)
