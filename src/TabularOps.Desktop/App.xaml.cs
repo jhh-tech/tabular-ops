@@ -14,7 +14,9 @@ public partial class App : Application
     public static ConnectionManager ConnectionManager { get; private set; } = null!;
     public static ConnectionStore ConnectionStore { get; private set; } = null!;
     public static RefreshHistoryStore RefreshHistory { get; private set; } = null!;
-    public static TomRefreshEngine RefreshEngine { get; private set; } = null!;
+    public static TomRefreshEngine TomRefreshEngine { get; private set; } = null!;
+    public static PowerBiRefreshEngine PowerBiRefreshEngine { get; private set; } = null!;
+    public static RefreshDispatcher RefreshEngine { get; private set; } = null!;
     public static PartitionCacheStore PartitionCache { get; private set; } = null!;
     public static BackupStore BackupStore { get; private set; } = null!;
     public static BackupService BackupService { get; private set; } = null!;
@@ -42,7 +44,9 @@ public partial class App : Application
         ConnectionManager = new ConnectionManager(Path.Combine(appDataDir, "Cache"), clientId);
         ConnectionStore = new ConnectionStore(appDataDir);
         RefreshHistory = new RefreshHistoryStore(Path.Combine(appDataDir, "refresh-history.db"));
-        RefreshEngine = new TomRefreshEngine(ConnectionManager, RefreshHistory);
+        TomRefreshEngine    = new TomRefreshEngine(ConnectionManager, RefreshHistory);
+        PowerBiRefreshEngine = new PowerBiRefreshEngine(ConnectionManager, RefreshHistory);
+        RefreshEngine       = new RefreshDispatcher(TomRefreshEngine, PowerBiRefreshEngine);
         PartitionCache = new PartitionCacheStore(Path.Combine(appDataDir, "partition-cache.db"));
         BackupStore = new BackupStore(Path.Combine(appDataDir, "backup-history.db"));
         BackupService = new BackupService(ConnectionManager, BackupStore);

@@ -45,12 +45,20 @@
                 <!-- Left: Refresh selected | Merge | New partition | Drop -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <!-- Refresh selected (accent) -->
-                    <Button Style="{StaticResource PrimaryButton}"
-                            Command="{Binding RefreshSelectedCommand}"
+                    <!-- Refresh selected (accent) — hidden while refreshing -->
+                    <Button Command="{Binding RefreshSelectedCommand}"
                             FontFamily="{StaticResource MonoFont}"
                             FontSize="11"
                             Padding="10,4">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRefreshing}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⟳ Refresh selected" VerticalAlignment="Center" />
                             <Border Background="{DynamicResource Bg0}"
@@ -64,6 +72,29 @@
                                            FontSize="9"
                                            Foreground="{DynamicResource Text0}" />
                             </Border>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Cancel refresh (Power BI: genuine server-side cancel; SSAS: best-effort) -->
+                    <Button Command="{Binding CancelRefreshSelectedCommand}"
+                            FontFamily="{StaticResource MonoFont}"
+                            FontSize="11"
+                            Padding="10,4"
+                            ToolTip="Cancel the running refresh">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource DangerButton}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRefreshing}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✕ Cancel"
+                                       Foreground="{DynamicResource Error}"
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 

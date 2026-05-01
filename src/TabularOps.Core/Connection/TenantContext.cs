@@ -41,6 +41,13 @@ public sealed class TenantContext
     /// </summary>
     public string? UserPrincipalName { get; set; }
 
+    /// <summary>
+    /// Power BI workspace GUID used for the Enhanced Refresh REST API.
+    /// Set from WorkspaceInfo.Id when the tenant is added via the dialog.
+    /// Null for SSAS / AAS connections.
+    /// </summary>
+    public string? WorkspaceGuid { get; set; }
+
     /// <summary>Fabric / Premium capacity the workspace is assigned to. Null for SSAS / AAS.</summary>
     public string? CapacityName { get; set; }
 

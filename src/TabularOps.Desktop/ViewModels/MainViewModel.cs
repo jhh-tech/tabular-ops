@@ -127,6 +127,7 @@ public partial class MainViewModel : ObservableObject
         node,
         new OverviewViewModel(_connectionManager, App.RefreshEngine, App.BackupService, App.BackupStore),
         new PartitionMapViewModel(_connectionManager, App.RefreshEngine, App.PartitionCache));
+        // App.RefreshEngine is a RefreshDispatcher — routes to TOM or Power BI engine
 
     [RelayCommand]
     private async Task SwitchTab(string tab)
@@ -337,7 +338,8 @@ public partial class MainViewModel : ObservableObject
                     DatabaseId: db.ID,
                     DatabaseName: db.Name,
                     EndpointType: context.EndpointType,
-                    CompatibilityLevel: db.CompatibilityLevel))
+                    CompatibilityLevel: db.CompatibilityLevel,
+                    WorkspaceGuid: context.WorkspaceGuid))
                 .ToList();
 
             PopulateModels(context.TenantId, models);

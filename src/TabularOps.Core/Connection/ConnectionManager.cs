@@ -127,6 +127,7 @@ public sealed class ConnectionManager : IAsyncDisposable
             ConnectionString = connectionString,
             EndpointType = EndpointType.PowerBi,
             TokenCacheFilePath = Path.Combine(_cacheDirectory, "powerbi", "msal.cache"),
+            WorkspaceGuid  = workspaceInfo?.Id,
             CapacityName   = workspaceInfo?.CapacityName,
             CapacityRegion = workspaceInfo?.CapacityRegion,
             CapacitySku    = workspaceInfo?.CapacitySku,
@@ -419,6 +420,17 @@ public sealed class ConnectionManager : IAsyncDisposable
 
         var token = await AcquireTokenAsync(state.MsalApp, ct);
         return $"Data Source={state.Context.ConnectionString};Password={token.AccessToken}";
+    }
+
+    /// <summary>
+    /// Returns a valid Power BI bearer token, refreshing silently from the MSAL cache.
+    /// Used by PowerBiRefreshEngine for direct REST API calls.
+    /// </summary>
+    public async Task<string> GetPowerBiAccessTokenAsync(CancellationToken ct = default)
+    {
+        var app = await GetOrCreatePowerBiAppAsync(ct);
+        var result = await AcquireTokenAsync(app, ct);
+        return result.AccessToken;
     }
 
     /// <summary>

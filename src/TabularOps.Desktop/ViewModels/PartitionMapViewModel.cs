@@ -153,7 +153,7 @@ public sealed class TableViewModel
 public partial class PartitionMapViewModel : ObservableObject
 {
     private readonly ConnectionManager _connectionManager;
-    private readonly TomRefreshEngine _refreshEngine;
+    private readonly RefreshDispatcher _refreshDispatcher;
     private readonly PartitionCacheStore _cache;
     private ModelRef? _currentModel;
     private IReadOnlyList<TableSnapshot> _snapshots = [];
@@ -197,11 +197,11 @@ public partial class PartitionMapViewModel : ObservableObject
     /// </summary>
     public Func<IReadOnlyList<(string Table, string Partition)>, string, bool>? ConfirmRefresh { get; set; }
 
-    public PartitionMapViewModel(ConnectionManager connectionManager, TomRefreshEngine refreshEngine, PartitionCacheStore cache)
+    public PartitionMapViewModel(ConnectionManager connectionManager, RefreshDispatcher refreshDispatcher, PartitionCacheStore cache)
     {
-        _connectionManager = connectionManager;
-        _refreshEngine = refreshEngine;
-        _cache = cache;
+        _connectionManager  = connectionManager;
+        _refreshDispatcher  = refreshDispatcher;
+        _cache              = cache;
     }
 
 
@@ -376,9 +376,8 @@ public partial class PartitionMapViewModel : ObservableObject
 
         try
         {
-            await _refreshEngine.RefreshAsync(
-                _currentModel.TenantId,
-                _currentModel.DatabaseName,
+            await _refreshDispatcher.RefreshAsync(
+                _currentModel,
                 partitionList,
                 mode: option.Mode,
                 progress: null,
