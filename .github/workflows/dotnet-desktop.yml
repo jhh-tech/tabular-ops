@@ -11,6 +11,9 @@ jobs:
 
   build:
 
+    permissions:
+      contents: write   # required to attach files to GitHub Releases
+
     strategy:
       matrix:
         configuration: [Debug, Release]
@@ -50,11 +53,26 @@ jobs:
         Configuration: ${{ matrix.configuration }}
 
     - name: Publish
-      if: startsWith(github.ref, 'refs/tags/')
-      run: dotnet publish $env:Desktop_Project_Path --configuration Release --runtime win-x64 --self-contained false --output publish\
+      if: matrix.configuration == 'Release'
+      run: dotnet publish $env:Desktop_Project_Path --configuration Release --runtime win-x64 --self-contained false --output publish/
 
-    - name: Attach to release
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Upload build artifact
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: TabularOps-Desktop
+        path: publish/
+
+    - name: Zip release output
+      if: matrix.configuration == 'Release' && startsWith(github.ref, 'refs/tags/')
+      run: Compress-Archive -Path publish/* -DestinationPath TabularOps-${{ github.ref_name }}-win-x64.zip
+
+    - name: Attach to GitHub Release
+      if: matrix.configuration == 'Release' && startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: publish\**
+        files: TabularOps-${{ github.ref_name }}-win-x64.zip
+        body: |
+          **Requires [.NET 8 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) to be installed.**
+
+          Extract the zip and run `TabularOps.Desktop.exe`.
