@@ -21,7 +21,25 @@ Desktop console for managing deployed Power BI / Analysis Services tabular model
 
 ---
 
-## Prerequisites
+## Run without installing
+
+Download `TabularOps-vX.Y.Z-win-x64.zip` from [Releases](https://github.com/jhh-tech/tabular-ops/releases), unzip, and run `TabularOps.Desktop.exe`. It is a self-contained single-file build — no .NET runtime or installer needed (Windows 10/11 x64). The exe is unsigned, so SmartScreen may warn on first launch: **More info → Run anyway**.
+
+Edit `appsettings.json` next to the exe to use your own Entra app registration (see below).
+
+**Portable mode:** create an empty file named `portable.flag` next to the exe and all local state (SQLite history, token cache, theme) is kept in a `data\` folder beside it instead of `%LocalAppData%\TabularOps`. The token cache is DPAPI-encrypted, so it only works for the same Windows user that created it.
+
+To build the same exe locally:
+
+```
+dotnet publish src\TabularOps.Desktop -p:PublishProfile=win-x64
+```
+
+Output goes to `publish\`.
+
+---
+
+## Prerequisites (building from source)
 
 - Windows 10/11 x64
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
@@ -114,10 +132,11 @@ TOM `Server` is not thread-safe — sharing a connection between a blocking `Sav
 
 **Refresh routing** (ADR-003): connection strings starting with `powerbi://` route to the Enhanced Refresh REST API; everything else goes through TOM `RequestRefresh`. The Power BI path supports cancellation; the TOM path cancels via `Server.CancelProcess(sessionId)` on a separate connection.
 
-**SQLite** (ADR-004): one DB file per data type in `%LocalAppData%\TabularOps\`. WAL mode is mandatory. Three stores:
+**SQLite** (ADR-004): one DB file per data type in `%LocalAppData%\TabularOps\` (or `data\` beside the exe in portable mode — all paths come from `TabularOps.Core.AppPaths`). WAL mode is mandatory. Stores:
 - `refresh-history.db` — partition-level refresh runs, Enhanced Refresh workspace sync
 - `partition-cache.db` — DMV stats cache for instant model switching (Phase 0 load)
 - `backup-history.db` — model backup runs with file path and size
+- `trace.db` — trace event archive (moved here from `%AppData%` on first start of newer builds)
 
 ---
 

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Client;
+using TabularOps.Core;
 using TabularOps.Core.Connection;
 using TabularOps.Core.Dmv;
 using TabularOps.Core.Refresh;
@@ -35,20 +36,18 @@ public partial class App : Application
                 "EntraClientId is missing from appsettings.json. " +
                 "See README.md for setup instructions.");
 
-        var appDataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TabularOps");
+        AppPaths.MigrateLegacyLocations();
 
         ThemeManager.Initialize();
 
-        ConnectionManager = new ConnectionManager(Path.Combine(appDataDir, "Cache"), clientId);
-        ConnectionStore = new ConnectionStore(appDataDir);
-        RefreshHistory = new RefreshHistoryStore(Path.Combine(appDataDir, "refresh-history.db"));
+        ConnectionManager = new ConnectionManager(AppPaths.CacheDirectory, clientId);
+        ConnectionStore = new ConnectionStore(AppPaths.DataDirectory);
+        RefreshHistory = new RefreshHistoryStore(AppPaths.RefreshHistoryDb);
         TomRefreshEngine    = new TomRefreshEngine(ConnectionManager, RefreshHistory);
         PowerBiRefreshEngine = new PowerBiRefreshEngine(ConnectionManager, RefreshHistory);
         RefreshEngine       = new RefreshDispatcher(TomRefreshEngine, PowerBiRefreshEngine);
-        PartitionCache = new PartitionCacheStore(Path.Combine(appDataDir, "partition-cache.db"));
-        BackupStore = new BackupStore(Path.Combine(appDataDir, "backup-history.db"));
+        PartitionCache = new PartitionCacheStore(AppPaths.PartitionCacheDb);
+        BackupStore = new BackupStore(AppPaths.BackupHistoryDb);
         BackupService = new BackupService(ConnectionManager, BackupStore);
 
         // Ensure interactive token acquisition always runs on the UI thread with the

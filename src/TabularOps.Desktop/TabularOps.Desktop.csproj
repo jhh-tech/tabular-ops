@@ -23,8 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Kept beside the exe (not bundled) so it can be edited in a single-file publish. -->
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
   </ItemGroup>
 
