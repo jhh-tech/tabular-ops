@@ -11,11 +11,10 @@ jobs:
 
   build:
 
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-
     runs-on: windows-latest
+
+    permissions:
+      contents: write   # create the GitHub release on tag pushes
 
     env:
       Solution_Name: TabularOps.slnx
@@ -31,30 +30,30 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
-
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v2
+        dotnet-version: 10.0.x
 
     - name: Restore
       run: dotnet restore $env:Solution_Name
 
-    - name: Execute unit tests
-      run: dotnet test $env:Test_Project_Path --configuration $env:Configuration --no-restore
-      env:
-        Configuration: ${{ matrix.configuration }}
-
     - name: Build
-      run: dotnet build $env:Solution_Name --configuration $env:Configuration --no-restore
-      env:
-        Configuration: ${{ matrix.configuration }}
+      run: dotnet build $env:Solution_Name --configuration Release --no-restore
 
+    - name: Execute unit tests
+      run: dotnet test $env:Test_Project_Path --configuration Release --no-build
+
+    # Self-contained single-file exe: runs on any Windows x64 machine without installing .NET.
     - name: Publish
       if: startsWith(github.ref, 'refs/tags/')
-      run: dotnet publish $env:Desktop_Project_Path --configuration Release --runtime win-x64 --self-contained false --output publish\
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        dotnet publish $env:Desktop_Project_Path -p:PublishProfile=win-x64 -p:Version=$version
+        Compress-Archive -Path publish\* -DestinationPath "TabularOps-${{ github.ref_name }}-win-x64.zip"
 
     - name: Attach to release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: publish\**
+        name: Tabular-Ops-${{ github.ref_name }}
+        prerelease: true
+        generate_release_notes: true
+        files: TabularOps-${{ github.ref_name }}-win-x64.zip

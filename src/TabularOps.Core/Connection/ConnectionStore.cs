@@ -27,6 +27,7 @@ public sealed class ConnectionStore
             ConnectionString = c.ConnectionString,
             EndpointType = c.EndpointType,
             TokenCacheFilePath = c.TokenCacheFilePath,
+            WorkspaceGuid = c.WorkspaceGuid,
             CapacityName = c.CapacityName,
             CapacityRegion = c.CapacityRegion,
             CapacitySku = c.CapacitySku,
@@ -52,6 +53,7 @@ public sealed class ConnectionStore
                 ConnectionString = e.ConnectionString,
                 EndpointType = e.EndpointType,
                 TokenCacheFilePath = e.TokenCacheFilePath,
+                WorkspaceGuid = e.WorkspaceGuid,
                 CapacityName = e.CapacityName,
                 CapacityRegion = e.CapacityRegion,
                 CapacitySku = e.CapacitySku,
@@ -70,6 +72,7 @@ public sealed class ConnectionStore
         public string ConnectionString { get; set; } = string.Empty;
         public EndpointType EndpointType { get; set; }
         public string? TokenCacheFilePath { get; set; }
+        public string? WorkspaceGuid { get; set; }
         public string? CapacityName { get; set; }
         public string? CapacityRegion { get; set; }
         public string? CapacitySku { get; set; }

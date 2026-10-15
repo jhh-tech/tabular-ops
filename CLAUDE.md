@@ -20,7 +20,7 @@ A data engineer or BI consultant who manages 5-15 deployed tabular models at onc
 
 ## Tech stack
 
-- **.NET 8** (C#)
+- **.NET 10** (C#)
 - **WPF** (Windows-only, x64 — see ADR-009)
 - **Microsoft.AnalysisServices** (TOM) — core model interaction
 - **Microsoft.AnalysisServices.AdomdClient** — DAX/MDX/DMV queries

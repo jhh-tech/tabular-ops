@@ -11,5 +11,10 @@ public sealed record ModelRef(
     string DatabaseId,
     string DatabaseName,
     EndpointType EndpointType,
-    int CompatibilityLevel
+    int CompatibilityLevel,
+    /// <summary>
+    /// Power BI workspace GUID (e.g. "3e20f6dc-ab12-...").
+    /// Required for the Enhanced Refresh REST API. Null for SSAS/AAS.
+    /// </summary>
+    string? WorkspaceGuid = null
 );

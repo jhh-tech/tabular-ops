@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Data;
+using TabularOps.Core;
 using TabularOps.Core.Connection;
 using TabularOps.Core.Tracing;
 
@@ -37,10 +38,7 @@ public partial class TraceViewModel : ObservableObject
     public TraceViewModel(ConnectionManager connectionManager)
     {
         _connectionManager = connectionManager;
-        var dbPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "TabularOps", "trace.db");
-        _traceStore = new TraceStore(dbPath);
+        _traceStore = new TraceStore(AppPaths.TraceDb);
 
         EventsView = CollectionViewSource.GetDefaultView(Events);
         EventsView.Filter = FilterEvent;

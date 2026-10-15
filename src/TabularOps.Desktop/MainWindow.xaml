@@ -357,8 +357,8 @@
                                                             </Border.InputBindings>
                                                             <Border.ContextMenu>
                                                                 <ContextMenu>
-                                                                    <MenuItem Header="Open in tab"
-                                                                              Command="{Binding PlacementTarget.Tag.SelectModelCommand,
+                                                                    <MenuItem Header="Open in new tab"
+                                                                              Command="{Binding PlacementTarget.Tag.OpenModelInNewTabCommand,
                                                                                         RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                               CommandParameter="{Binding PlacementTarget.DataContext,
                                                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}" />

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using TabularOps.Core;
 
 namespace TabularOps.Desktop;
 
@@ -10,9 +11,7 @@ namespace TabularOps.Desktop;
 /// </summary>
 public static class ThemeManager
 {
-    private static readonly string PreferenceFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TabularOps", "theme");
+    private static string PreferenceFile => AppPaths.ThemePreferenceFile;
 
     private static readonly Uri DarkUri  = new("/Themes/Colors.xaml",      UriKind.Relative);
     private static readonly Uri LightUri = new("/Themes/ColorsLight.xaml",  UriKind.Relative);

@@ -12,7 +12,7 @@ namespace TabularOps.Desktop.ViewModels;
 public partial class OverviewViewModel : ObservableObject
 {
     private readonly ConnectionManager _connectionManager;
-    private readonly TomRefreshEngine _refreshEngine;
+    private readonly RefreshDispatcher _refreshDispatcher;
     private readonly BackupService _backupService;
     private readonly BackupStore _backupStore;
     private ModelRef? _currentModel;
@@ -50,14 +50,14 @@ public partial class OverviewViewModel : ObservableObject
 
     public OverviewViewModel(
         ConnectionManager connectionManager,
-        TomRefreshEngine refreshEngine,
+        RefreshDispatcher refreshDispatcher,
         BackupService backupService,
         BackupStore backupStore)
     {
-        _connectionManager = connectionManager;
-        _refreshEngine     = refreshEngine;
-        _backupService     = backupService;
-        _backupStore       = backupStore;
+        _connectionManager  = connectionManager;
+        _refreshDispatcher  = refreshDispatcher;
+        _backupService      = backupService;
+        _backupStore        = backupStore;
     }
 
     public async Task LoadAsync(ModelRef model, bool force = false, CancellationToken ct = default)
@@ -164,10 +164,7 @@ public partial class OverviewViewModel : ObservableObject
 
         try
         {
-            await _refreshEngine.RefreshModelAsync(
-                _currentModel.TenantId,
-                _currentModel.DatabaseName,
-                option.Mode);
+            await _refreshDispatcher.RefreshModelAsync(_currentModel, option.Mode);
 
             var elapsed = FormatElapsed(DateTimeOffset.UtcNow - _operationStarted);
             ProcessStatus = $"Process completed ({option.DisplayName}) — {elapsed}";
