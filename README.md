@@ -14,10 +14,11 @@ Desktop console for managing deployed Power BI / Analysis Services tabular model
 | 2 — Partition map | ✅ Done | Partition tiles from TOM + DMV stats, selection, fill bar |
 | 3 — Refresh engine | ✅ Done | TOM refresh, SQLite history, Power BI Enhanced Refresh history sync |
 | 4 — UX polish | ✅ Done | Partition cache, refresh confirm dialog, workspace context bar, theming |
-| 5 — Live trace | ⏳ Next | Event streaming via `Channel<T>`, trace list, filter chips |
+| 5 — Live trace | ✅ Done | Event streaming via `Channel<T>`, trace list, filter chips, SQLite archive |
 | 6 — GUI alignment | ✅ Done | Fonts, light theme fix, startup perf, Overview tab, process model |
-| 7 — Backup | 🚧 In progress | TOM `Database.Backup()`, ABF file picker, SQLite backup history |
-| 8 — Power BI Enhanced Refresh | Planned | Cancel support, REST API refresh path |
+| 7 — Backup | ✅ Done (v0.7.0) | TOM `Database.Backup()` to a server-side ABF file, SQLite backup history |
+| 8 — Power BI Enhanced Refresh | ✅ Done (v0.8.0) | REST API refresh path, cancel support, tab navigation, single-file exe, .NET 10 |
+| 9+ — Nice to have | Planned | Refresh retry/timeout settings, sessions view, memory breakdown, DAX query window |
 
 ---
 

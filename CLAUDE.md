@@ -116,12 +116,12 @@ Do NOT try to build everything at once. Follow this order — each milestone is 
 - **ComboBox theming**: full custom `ControlTemplate` for ComboBox + ComboBoxItem using `DynamicResource` colors
 - **Light/dark theme toggle**: runtime swap via `ThemeManager`; preference persisted to disk; all controls use `{DynamicResource}` throughout
 
-### Milestone 5: Live trace (pending)
-- Adapt trace subscription from `AsTrace`
-- Stream events to UI via `Channel<TraceEvent>`
-- Trace list with detail pane
+### ✅ Milestone 5: Live trace — DONE (commit eb524e4)
+- Trace subscription adapted from `AsTrace`; events streamed to UI via `Channel<TraceEvent>`
+- Trace list with detail pane (scope, duration, CPU, rows, error code, session ID)
 - Event filter chips (Progress / Query / Errors / Lock / Audit)
-- **Done when:** starting a refresh causes live events to stream into the trace view, and failures show full error context in detail pane
+- Events persisted to SQLite (`trace.db`, 30-day rolling archive)
+- Trace auto-stops when switching away from the tab, resumes on return
 
 ### ✅ Milestone 6: GUI alignment with spec — DONE (commit 4a7fdd1)
 - JetBrains Mono Bold/SemiBold fonts downloaded; all weight variants now render correctly
@@ -133,18 +133,20 @@ Do NOT try to build everything at once. Follow this order — each milestone is 
 - Process model dropdown in Overview toolbar for whole-model refreshes in any mode
 - All unimplemented buttons disabled with "Coming soon" tooltips
 
-### 🚧 Milestone 7: Backup (in progress)
+### ✅ Milestone 7: Backup — DONE (PR #2, release v0.7.0)
 - `BackupService` + `BackupStore`: TOM `Database.Backup()` → ABF file, SQLite run history
-- Overview toolbar: "Backup model" → SaveFileDialog → backup → last backup date updated in UI
-- **Done when:** clicking Backup model on a connected SSAS/AAS or Power BI Premium model saves a `.abf` file and shows the completion date in the Overview tab
+- Overview toolbar: "Backup model" → file name only (the server owns the storage location; no SaveFileDialog) → last backup date updated in UI
 
-### Milestone 8: Power BI Enhanced Refresh path
-- Detect `powerbi://` connection strings, route to REST API
-- Implement Cancel action (the thing SSMS can't do)
-- Retry/timeout configuration per refresh
-- **Done when:** a running refresh on a Power BI model can be cancelled from the selection tray
+### ✅ Milestone 8: Power BI Enhanced Refresh path — DONE (PR #4, release v0.8.0)
+- `RefreshDispatcher` routes Power BI / Fabric to the Enhanced Refresh REST API, SSAS/AAS to TOM
+- `PowerBiRefreshEngine`: POST `/refreshes` → poll status → DELETE on cancel
+- Cancel button in the partition map selection tray (the thing SSMS can't do)
+- Left-click a sidebar model opens it in the current tab; right-click → new tab
+- Self-contained single-file `win-x64` exe (no runtime install), portable mode via `portable.flag`, all local paths via `AppPaths`
+- Upgraded to .NET 10; tag pushes build and publish a pre-release automatically
 
 ### Milestone 9+ (nice to have, not MVP)
+- Retry/timeout configuration per refresh (deferred from M8; `RetryCount` is currently hard-coded to 0)
 - Sessions view (via `DISCOVER_SESSIONS`)
 - Memory breakdown view (Vertipaq-style)
 - DAX query window
