@@ -42,7 +42,7 @@ Output goes to `publish\`.
 ## Prerequisites (building from source)
 
 - Windows 10/11 x64
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - A Power BI workspace with XMLA enabled (Premium, PPU, or Fabric capacity) **or** an SSAS/AAS instance you can reach over the network
 
 ---

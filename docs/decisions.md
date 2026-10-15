@@ -33,7 +33,7 @@ Both implement `IRefreshEngine`. UI layer never knows which is in use. The Power
 - One DB file per tenant, stored in platform app data dir
 - `refresh_runs` table for refresh history
 - `trace_events` table with rolling retention (keep last 30 days by default)
-- Use `Microsoft.Data.Sqlite` not `System.Data.SQLite` (better .NET 8 support)
+- Use `Microsoft.Data.Sqlite` not `System.Data.SQLite` (better modern .NET support)
 - **WAL mode is mandatory:** enable `PRAGMA journal_mode=WAL` at DB init. Trace event inserts and refresh history writes happen on different threads; WAL eliminates lock contention.
 - **Batch trace inserts:** flush to SQLite every 500ms or 50 events, whichever comes first. Never insert per-event — trace bursts during large refreshes will saturate the writer.
 
@@ -144,8 +144,7 @@ To switch back to the own registration, update `EntraClientId` in `appsettings.j
 <PackageReference Include="Microsoft.Identity.Client" Version="4.*" />
 <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.*" />
 <PackageReference Include="Microsoft.PowerBI.Api" Version="4.*" />
-<PackageReference Include="Microsoft.Data.Sqlite" Version="8.*" />
-<PackageReference Include="System.Threading.Channels" Version="8.*" />
+<PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />
 
 <!-- TabularOps.Desktop.csproj -->
 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
